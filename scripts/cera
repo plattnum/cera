@@ -1,0 +1,12 @@
+#!/bin/sh
+# Opens a file in Cera from the terminal: cera [file]
+# A file that doesn't exist yet is created empty first, so `cera notes.md` starts a new note.
+if [ $# -eq 0 ]; then
+    exec open -a Cera
+fi
+if [ $# -gt 1 ]; then
+    echo "usage: cera [file]  (Cera opens one file at a time)" >&2
+    exit 64
+fi
+[ -e "$1" ] || : > "$1" || exit 1
+exec open -a Cera -- "$1"

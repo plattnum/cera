@@ -57,7 +57,18 @@ cp -R build/Cera.app /Applications/
 ```
 
 Then open Cera from Spotlight, Launchpad, or Finder, and use **Open With ▸ Cera** on any
-`.md` file. Re-run both commands to update.
+`.md` file. To update, re-run `./scripts/bundle.sh`, then
+`rm -rf /Applications/Cera.app && cp -R build/Cera.app /Applications/`.
+
+### The `cera` terminal command
+
+`cera notes.md` opens a file in Cera from the terminal; a file that doesn't exist yet is
+created empty. Homebrew installs the command for you. For a source install, link it onto
+your PATH once:
+
+```sh
+ln -sf /Applications/Cera.app/Contents/Resources/cera /usr/local/bin/cera   # or ~/.local/bin/cera
+```
 
 ## Tests
 

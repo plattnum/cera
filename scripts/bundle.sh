@@ -17,6 +17,8 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 # Theme fonts (open-licensed; their LICENSE files travel with them).
 cp -R Sources/Cera/Resources/Fonts "$APP/Contents/Resources/Fonts"
+# The `cera` terminal command; Homebrew links it onto the PATH.
+cp scripts/cera "$APP/Contents/Resources/cera"
 
 # Ad-hoc signature so the bundle launches on this Mac without a developer ID.
 codesign --force --sign - "$APP"

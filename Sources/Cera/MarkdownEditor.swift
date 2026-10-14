@@ -144,6 +144,7 @@ struct MarkdownEditor: NSViewRepresentable {
                                                joinsHardWrappedLines: joinsHardWrappedLines)
             let styler = liveStyler ?? LiveStyler(storage: storage, settings: settings)
             liveStyler = styler
+            textView.topLevelBlocks = { [weak styler] in styler?.blocks ?? [] }
             styler.restyleAll(caret: caret, settings: settings)
         }
 

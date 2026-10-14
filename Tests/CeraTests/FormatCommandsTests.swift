@@ -133,6 +133,58 @@ final class FormatCommandsTests: XCTestCase {
         XCTAssertEqual(view.string, "bold it code old site")
     }
 
+    /// Selecting rendered text selects only the visible characters, not the hidden markers.
+    private func clear(_ text: String, selecting word: String) -> MarkdownTextView {
+        let view = editor(text, select: (text as NSString).range(of: word))
+        view.topLevelBlocks = { MarkdownStyler.topLevelBlocks(in: view.string as NSString) }
+        view.clearFormatting(nil)
+        return view
+    }
+
+    func testClearFormattingRemovesMarkersAroundSelectedText() {
+        let view = clear("Some **bold** text", selecting: "bold")
+        XCTAssertEqual(view.string, "Some bold text")
+        XCTAssertEqual((view.string as NSString).substring(with: view.selectedRange()), "bold")
+
+        XCTAssertEqual(clear("an *it* word", selecting: "it").string, "an it word")
+        XCTAssertEqual(clear("~~old~~ news", selecting: "old").string, "old news")
+        XCTAssertEqual(clear("run `ls -la` now", selecting: "ls").string, "run ls -la now")
+        XCTAssertEqual(clear("run `` `x` `` now", selecting: "x").string, "run `x` now")
+        XCTAssertEqual(clear("see [the site](https://a.b) ok", selecting: "site").string, "see the site ok")
+        XCTAssertEqual(clear("go <https://a.b> ok", selecting: "a.b").string, "go https://a.b ok")
+    }
+
+    func testClearFormattingNestedAndPartialSpans() {
+        XCTAssertEqual(clear("A ***both*** B", selecting: "both").string, "A both B")
+        XCTAssertEqual(clear("**bold *and it* end**", selecting: "and").string, "bold and it end")
+        XCTAssertEqual(clear("x **longer bold** y", selecting: "ger b").string, "x longer bold y")
+        // Spans the selection doesn't touch keep their formatting.
+        XCTAssertEqual(clear("**one** two **three**", selecting: "two").string, "**one** two **three**")
+        XCTAssertEqual(clear("**one** two **three**", selecting: "one** two").string, "one two **three**")
+    }
+
+    func testFormatBarEraserClearsSelectedText() throws {
+        let text = "Some **bold** text"
+        let view = editor(text, select: NSRange(location: 0, length: 0))
+        view.setSelectedRange((text as NSString).range(of: "bold"))
+        let bar = try XCTUnwrap(view.formatBar)
+        XCTAssertFalse(bar.isHidden)
+        func buttons(in view: NSView) -> [NSButton] {
+            view.subviews.flatMap { ($0 as? NSButton).map { [$0] } ?? buttons(in: $0) }
+        }
+        let eraser = try XCTUnwrap(buttons(in: bar).first { $0.toolTip?.hasPrefix("Clear Formatting") == true })
+        XCTAssertTrue(bar.bounds.contains(eraser.convert(eraser.bounds, to: bar)), "the eraser is fully inside the bar")
+        eraser.performClick(nil)
+        XCTAssertEqual(view.string, "Some bold text")
+    }
+
+    func testClearFormattingAcrossLinesAndInContext() {
+        let view = clear("- **first** item\n- *second* item", selecting: "first** item\n- *sec")
+        XCTAssertEqual(view.string, "- first item\n- second item")
+        // Asterisks inside a code block aren't formatting.
+        XCTAssertEqual(clear("```\n**not bold**\n```", selecting: "not").string, "```\n**not bold**\n```")
+    }
+
     func testCommandsAreUndoable() throws {
         let view = editor("one", select: NSRange(location: 0, length: 0))
         let undo = try XCTUnwrap(view.undoManager)

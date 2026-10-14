@@ -102,6 +102,10 @@ final class MarkdownTextView: NSTextView {
     /// Called when the text column's width changes, so images and tables can be resized.
     var onWidthChange: (() -> Void)?
 
+    /// The document's top-level block ranges, kept current by the editor's styler.
+    /// Formatting commands parse whole blocks, so Markdown is read in its real context.
+    var topLevelBlocks: () -> [NSRange] = { [] }
+
     override func setFrameSize(_ newSize: NSSize) {
         let widthChanged = newSize.width != frame.width
         super.setFrameSize(newSize)

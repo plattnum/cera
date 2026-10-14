@@ -172,16 +172,37 @@ extension MarkdownTextView {
         insertBlock("---")
     }
 
-    /// Removes bold, italic, strikethrough, code, and link syntax from the selection, keeping the text.
+    /// Removes bold, italic, strikethrough, code, link, and image syntax from every span the
+    /// selection touches, keeping the text. The markers are usually hidden outside the
+    /// selection, so the spans come from parsing the blocks around it.
     @objc func clearFormatting(_ sender: Any?) {
-        let range = selectedRange()
-        guard range.length > 0 else { return }
-        var text = (string as NSString).substring(with: range)
-        text = text.replacingOccurrences(of: "!?\\[([^\\]]*)\\]\\([^)]*\\)", with: "$1", options: .regularExpression)
-        for marker in ["**", "~~", "`", "*"] {
-            text = text.replacingOccurrences(of: marker, with: "")
+        let selection = selectedRange()
+        guard selection.length > 0 else { return }
+        let text = string as NSString
+        var region = text.lineRange(for: selection)
+        for block in topLevelBlocks() where NSMaxRange(block) <= text.length
+            && NSIntersectionRange(block, region).length > 0 {
+            region = NSUnionRange(region, block)
         }
-        edit(range, with: text, selection: NSRange(location: range.location, length: (text as NSString).length))
+        let markers = InlineMarkup.markers(in: text, region: region, touching: selection)
+        guard !markers.isEmpty else { return }
+
+        var result = ""
+        var cursor = region.location
+        for marker in markers {
+            result += text.substring(with: NSRange(location: cursor, length: marker.location - cursor))
+            cursor = NSMaxRange(marker)
+        }
+        result += text.substring(with: NSRange(location: cursor, length: NSMaxRange(region) - cursor))
+
+        // Keep the same text selected: drop the removed characters that came before each end.
+        func moved(_ location: Int) -> Int {
+            location - markers.reduce(0) { removed, marker in
+                removed + max(0, min(NSMaxRange(marker), location) - marker.location)
+            }
+        }
+        let start = moved(selection.location)
+        edit(region, with: result, selection: NSRange(location: start, length: moved(NSMaxRange(selection)) - start))
     }
 
     /// Inserts `block` as its own paragraph at the selection, adding blank lines

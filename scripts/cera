@@ -1,12 +1,21 @@
 #!/bin/sh
 # Opens a file in Cera from the terminal: cera [file]
 # A file that doesn't exist yet is created empty first, so `cera notes.md` starts a new note.
+
+# Open the Cera.app this script ships in (Contents/Resources/cera), not whichever copy of
+# Cera Launch Services finds first; outside an app bundle, fall back to Cera by name.
+app=$(cd "$(dirname "$(realpath "$0")")/../.." && pwd)
+case "$app" in
+    *.app) ;;
+    *) app=Cera ;;
+esac
+
 if [ $# -eq 0 ]; then
-    exec open -a Cera
+    exec open -a "$app"
 fi
 if [ $# -gt 1 ]; then
     echo "usage: cera [file]  (Cera opens one file at a time)" >&2
     exit 64
 fi
 [ -e "$1" ] || : > "$1" || exit 1
-exec open -a Cera -- "$1"
+exec open -a "$app" -- "$1"

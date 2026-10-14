@@ -143,4 +143,30 @@ final class MarkdownStylerTests: XCTestCase {
         let storage = style(source, caret: (source as NSString).length + 10)
         XCTAssertEqual(font(in: storage, at: 3), theme.codeFont)
     }
+
+    // MARK: - Nested emphasis, escapes, definitions
+
+    func testBoldItalicHidesAllSixAsterisks() {
+        let source = "a ***both*** b\n\nlast"
+        let storage = style(source, caret: (source as NSString).length)
+        for index in [2, 3, 4, 9, 10, 11] {
+            XCTAssertEqual(color(in: storage, at: index), .clear, "asterisk at \(index)")
+        }
+        let traits = font(in: storage, at: 5)?.fontDescriptor.symbolicTraits ?? []
+        XCTAssertTrue(traits.contains(.bold) && traits.contains(.italic))
+    }
+
+    func testEscapeBackslashesHide() {
+        let source = "a \\*not italic\\* b\n\nlast"
+        let storage = style(source, caret: (source as NSString).length)
+        XCTAssertEqual(color(in: storage, at: 2), .clear)   // the backslash
+        XCTAssertNotEqual(color(in: storage, at: 3), .clear) // the asterisk stays
+    }
+
+    func testDefinitionLinesAreDimmed() {
+        let source = "see [x][d]\n\n[d]: https://example.com\n\nlast"
+        let storage = style(source, caret: (source as NSString).length)
+        let definition = (source as NSString).range(of: "[d]:").location
+        XCTAssertEqual(color(in: storage, at: definition), theme.marker)
+    }
 }

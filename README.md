@@ -1,10 +1,18 @@
 # Cera
 
-A quick WYSIWYG Markdown viewer and editor for macOS. Markdown renders as you type: headings, bold, italic, code, links, lists, and checkboxes look like a finished document, and the syntax markers appear only on the line you are editing. Files stay plain `.md` text.
+**Notepad for Markdown on the Mac.** Double-click a `.md` file, read it beautifully rendered, fix a line, save, close.
+
+Cera is a quick WYSIWYG Markdown viewer and editor for macOS. Markdown renders as you type: headings, bold, italic, code, links, lists, and checkboxes look like a finished document, and the syntax markers appear only on the line you are editing. Files stay plain `.md` text.
 
 Pick a look from the **Themes** menu: Midnight (dark), Plain, Broadsheet, Airy, Ivory, and Grotesk. Each theme sets its own fonts, colors, column width, heading style, and spacing. Code blocks are syntax-highlighted for common languages (shell, Python, JavaScript/TypeScript, Swift, Rust, Go, C-family, YAML/TOML).
 
 Written in Swift with SwiftUI for the window and AppKit's `NSTextView` for editing. Requires macOS 15 or later.
+
+## What Cera is, and isn't
+
+Cera is for **one file at a time**: the README in a repository, meeting notes someone sent you, a quick draft, a one-off document. It opens instantly, stays out of the way, and works on the file where it lives.
+
+It is **not** a second brain. It does not replace Obsidian, Bear, Logseq, or other note-taking systems and their excellent features. There are no vaults, no folder or project sidebar, no backlinks, tags, or sync. That's deliberate: like Notepad, it opens a file, and that's the whole model. If you want a knowledge base, use one of those tools. If you just want to open a Markdown file and have it look right, use Cera.
 
 ## Requirements
 
@@ -29,6 +37,19 @@ scheme with **My Mac**, and press ⌘R. (Xcode runs the bare executable; use
 `scripts/bundle.sh` for a full app with its icon and Finder integration.)
 
 ## Install
+
+**Homebrew:**
+
+```sh
+brew install --cask plattnum/cera/cera
+```
+
+**Download:** get `Cera.zip` from the
+[latest release](https://github.com/plattnum/cera/releases/latest), unzip it, and move
+`Cera.app` to Applications. See [Opening a downloaded build](#opening-a-downloaded-build)
+for the first launch.
+
+**From source:**
 
 ```sh
 ./scripts/bundle.sh

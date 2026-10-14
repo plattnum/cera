@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cera: notepad for Markdown on the Mac</title>
+<meta name="description" content="Cera opens a Markdown file and shows it as a finished document. Edit any line in place. A quick, native macOS app for one file at a time.">
+<link rel="icon" href="images/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Cera's own Midnight theme, with the wax seal's amber as the one accent. */
+    --slate: #363B40;
+    --slate-deep: #2C3034;
+    --ink: #B8BFC6;
+    --ink-bright: #DEDEDE;
+    --marker: #7C838A;
+    --wax: #C86A2B;
+    --wax-light: #E8A060;
+    --rule: #474D54;
+    --display: "Libre Caslon Display", "Hoefler Text", Georgia, serif;
+    --text: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, Menlo, Monaco, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--slate); }
+  body {
+    margin: 0;
+    background: var(--slate);
+    color: var(--ink);
+    font: 17px/1.6 var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--ink-bright); text-underline-offset: 3px; }
+  a:hover { color: var(--wax-light); }
+  :focus-visible { outline: 2px solid var(--wax-light); outline-offset: 3px; border-radius: 3px; }
+
+  .page { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+
+  /* Hero */
+  header { padding: 72px 0 48px; display: grid; grid-template-columns: 1fr; gap: 40px; }
+  .brand { display: flex; align-items: center; gap: 20px; }
+  .brand img { width: 88px; height: 88px; }
+  h1 {
+    font: 400 96px/0.9 var(--display);
+    color: var(--ink-bright);
+    margin: 0;
+    letter-spacing: -1px;
+  }
+  .tagline { font: 400 34px/1.2 var(--display); color: var(--ink-bright); margin: 28px 0 14px; max-width: 18ch; }
+  .lede { max-width: 56ch; margin: 0 0 28px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .button {
+    display: inline-block;
+    padding: 12px 22px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    color: #1E1A16;
+    background: var(--wax-light);
+  }
+  .button:hover { color: #1E1A16; background: #F2B57A; }
+  .quiet { color: var(--ink); }
+  .requirement { font-size: 14px; color: var(--marker); margin-top: 14px; }
+
+  /* The live demo: a Cera window whose lines show Markdown when pointed at */
+  .window {
+    background: var(--slate);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+  }
+  .titlebar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px;
+    background: var(--slate-deep);
+    font: 600 13px var(--text);
+    color: var(--marker);
+  }
+  .titlebar i { width: 12px; height: 12px; border-radius: 50%; background: #4A4F55; display: inline-block; }
+  .titlebar span { margin-left: auto; margin-right: auto; padding-right: 52px; }
+  .doc { padding: 34px clamp(20px, 6vw, 64px) 40px; }
+  .line {
+    position: relative;
+    padding: 3px 0;
+    border-radius: 4px;
+    cursor: text;
+    outline: none;
+  }
+  .line .source { display: none; font-family: var(--text); }
+  .line:hover .rendered, .line:focus .rendered, .line.editing .rendered { display: none; }
+  .line:hover .source, .line:focus .source, .line.editing .source { display: inline; }
+  .line:hover, .line:focus, .line.editing { background: rgba(255, 255, 255, 0.03); }
+  .line:focus-visible { box-shadow: inset 2px 0 0 var(--wax-light); }
+  .m { color: var(--marker); }
+  .caret { display: inline-block; width: 2px; height: 1.1em; vertical-align: -0.15em; background: var(--ink-bright); margin-left: 1px; }
+  .line:not(:hover):not(:focus):not(.editing) .caret { display: none; }
+  .d-h1 { font: 400 34px/1.3 "Lucida Grande", var(--text); color: var(--ink-bright); letter-spacing: -1px; margin-bottom: 10px; }
+  .d-h1 .source { font-size: 34px; letter-spacing: -1px; }
+  .d-p, .d-li, .d-quote { font-size: 16px; line-height: 26px; }
+  .d-li { padding-left: 30px; }
+  .d-li .rendered::before { content: ""; position: absolute; left: 10px; top: 13px; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+  .d-li.task .rendered::before { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--marker); background: none; left: 7px; top: 9px; }
+  .d-li.task.done .rendered::before { background: var(--marker); }
+  .d-li .source { margin-left: -30px; }
+  .d-quote { margin-top: 12px; padding-left: 30px; color: #9DA2A6; }
+  .d-quote .rendered { display: inline-block; border-left: 2px solid var(--rule); padding-left: 28px; margin-left: -30px; }
+  .line:hover.d-quote .source, .line:focus.d-quote .source { margin-left: -30px; }
+  .d-code { font: 14px var(--mono); background: rgba(0, 0, 0, 0.12); padding: 2px 5px; border-radius: 2px; }
+  .d-link { color: var(--ink-bright); text-decoration: underline; text-underline-offset: 3px; }
+  .demo-note { font-size: 14px; color: var(--marker); margin: 14px 2px 0; }
+
+  /* Sections */
+  section { padding: 64px 0; border-top: 1px solid var(--rule); }
+  h2 { font: 400 44px/1.1 var(--display); color: var(--ink-bright); margin: 0 0 20px; }
+  .two { display: grid; grid-template-columns: 1fr; gap: 32px; }
+  .prose { max-width: 62ch; }
+  .prose p { margin: 0 0 16px; }
+  .is-not { list-style: none; padding: 0; margin: 0; }
+  .is-not li { padding: 10px 0; border-bottom: 1px solid var(--rule); color: var(--ink); }
+  .is-not li:last-child { border-bottom: none; }
+  .is-not strong { color: var(--ink-bright); font-weight: 600; }
+
+  /* Themes */
+  .themes { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; }
+  .themes button {
+    font: 500 15px var(--text);
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 7px 16px;
+    cursor: pointer;
+  }
+  .themes button[aria-pressed="true"] { color: #1E1A16; background: var(--wax-light); border-color: var(--wax-light); }
+  .shot { margin: 0; }
+  .shot img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--rule); }
+  .shot figcaption { font-size: 14px; color: var(--marker); margin-top: 10px; }
+
+  /* Install */
+  .ways { display: grid; grid-template-columns: 1fr; gap: 28px; }
+  .way h3 { font: 600 19px var(--text); color: var(--ink-bright); margin: 0 0 8px; }
+  .way p { margin: 0 0 12px; }
+  pre {
+    margin: 0;
+    padding: 14px 16px;
+    background: #333333;
+    border-radius: 8px;
+    font: 14px/1.6 var(--mono);
+    color: var(--ink);
+    overflow-x: auto;
+  }
+  .note { font-size: 15px; color: var(--marker); max-width: 70ch; margin-top: 28px; }
+  .note code, .way code { font: 14px var(--mono); color: var(--ink); }
+
+  footer { border-top: 1px solid var(--rule); padding: 32px 0 56px; font-size: 14px; color: var(--marker); display: flex; flex-wrap: wrap; gap: 8px 24px; }
+
+  @media (min-width: 860px) {
+    header { grid-template-columns: 0.9fr 1.1fr; align-items: center; padding-top: 96px; }
+    .two { grid-template-columns: 1fr 1fr; gap: 56px; }
+    .ways { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (max-width: 520px) {
+    h1 { font-size: 72px; }
+    .tagline { font-size: 28px; }
+    h2 { font-size: 36px; }
+    .brand img { width: 64px; height: 64px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div>
+    <div class="brand">
+      <img src="images/icon.png" alt="">
+      <h1>Cera</h1>
+    </div>
+    <p class="tagline">Notepad for Markdown on the Mac.</p>
+    <p class="lede">Open a <code>.md</code> file and it reads like a finished document. Click any line to edit its Markdown; move away and it renders again. Your file stays plain text.</p>
+    <div class="actions">
+      <a class="button" href="https://github.com/plattnum/cera/releases/latest/download/Cera.zip">Download for macOS</a>
+      <a class="quiet" href="#get">Install with Homebrew</a>
+    </div>
+    <p class="requirement">Free and open source. Requires macOS 15 or later.</p>
+  </div>
+
+  <div>
+    <div class="window" aria-label="Cera window showing a Markdown document">
+      <div class="titlebar"><i></i><i></i><i></i><span>notes.md</span></div>
+      <div class="doc">
+        <div class="line d-h1" tabindex="0">
+          <span class="rendered">Release checklist</span>
+          <span class="source"><span class="m"># </span>Release checklist<span class="caret"></span></span>
+        </div>
+        <div class="line d-p editing" tabindex="0">
+          <span class="rendered">Ship the <strong>beta</strong> on <em>Friday</em>, then tell the team.</span>
+          <span class="source">Ship the <span class="m">**</span>beta<span class="m">**</span> on <span class="m">*</span>Friday<span class="m">*</span>, then tell the team.<span class="caret"></span></span>
+        </div>
+        <div class="line d-li task done" tabindex="0">
+          <span class="rendered">Fix the <span class="d-code">--zip</span> flag</span>
+          <span class="source"><span class="m">- [x] </span>Fix the <span class="m">`</span>--zip<span class="m">`</span> flag<span class="caret"></span></span>
+        </div>
+        <div class="line d-li task" tabindex="0">
+          <span class="rendered">Write the <span class="d-link">release notes</span></span>
+          <span class="source"><span class="m">- [ ] </span>Write the <span class="m">[</span>release notes<span class="m">](notes/release.md)</span><span class="caret"></span></span>
+        </div>
+        <div class="line d-quote" tabindex="0">
+          <span class="rendered">Keep it simple. One file, one window.</span>
+          <span class="source"><span class="m">&gt; </span>Keep it simple. One file, one window.<span class="caret"></span></span>
+        </div>
+      </div>
+    </div>
+    <p class="demo-note">Point at a line, or tab to it, to see the Markdown underneath.</p>
+  </div>
+</header>
+
+<section id="what">
+  <div class="two">
+    <div class="prose">
+      <h2>One file at a time</h2>
+      <p>Cera is for the README in a repository, the notes someone sent you, a quick draft, a one-off document. Double-click it, read it, fix a line, save, close.</p>
+      <p>It isn't a second brain, and it doesn't try to replace Obsidian, Bear, or Logseq. There are no vaults and no folder sidebar, on purpose. Like Notepad, it opens a file, and that's the whole idea.</p>
+    </div>
+    <ul class="is-not">
+      <li><strong>Opens any <code>.md</code> file</strong> from Finder, Open Recent, or the command line.</li>
+      <li><strong>Renders as you type:</strong> headings, lists, task lists, quotes, tables, images, and highlighted code.</li>
+      <li><strong>Edits in place:</strong> the line you're on shows its Markdown, the rest stays rendered.</li>
+      <li><strong>Formats without memorizing syntax:</strong> select text and a format bar appears.</li>
+      <li><strong>Handles big files:</strong> a 10 MB document opens in about a second and types without lag.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="themes">
+  <h2>Six themes</h2>
+  <div class="themes" role="group" aria-label="Choose a theme to preview">
+    <button type="button" data-theme="midnight" aria-pressed="true">Midnight</button>
+    <button type="button" data-theme="plain" aria-pressed="false">Plain</button>
+    <button type="button" data-theme="broadsheet" aria-pressed="false">Broadsheet</button>
+    <button type="button" data-theme="airy" aria-pressed="false">Airy</button>
+    <button type="button" data-theme="ivory" aria-pressed="false">Ivory</button>
+    <button type="button" data-theme="grotesk" aria-pressed="false">Grotesk</button>
+  </div>
+  <figure class="shot">
+    <img id="theme-shot" src="images/theme-midnight.png" width="1400" height="1105" alt="Cera's Midnight theme showing a sample document" loading="lazy">
+    <figcaption id="theme-caption">Midnight: dark slate, Lucida Grande headings.</figcaption>
+  </figure>
+</section>
+
+<section id="get">
+  <h2>Get Cera</h2>
+  <div class="ways">
+    <div class="way">
+      <h3>Download</h3>
+      <p>The latest build, ready to run.</p>
+      <p><a href="https://github.com/plattnum/cera/releases/latest/download/Cera.zip">Cera.zip</a>. Unzip it and move Cera to Applications.</p>
+    </div>
+    <div class="way">
+      <h3>Homebrew</h3>
+      <p>Install and update from the terminal.</p>
+      <pre>brew install --cask plattnum/cera/cera</pre>
+    </div>
+    <div class="way">
+      <h3>Build from source</h3>
+      <p>Needs Xcode 16 or its command line tools.</p>
+      <pre>git clone https://github.com/plattnum/cera
+cd cera
+./scripts/bundle.sh
+open build/Cera.app</pre>
+    </div>
+  </div>
+  <p class="note">Cera isn't signed with an Apple Developer ID yet, so the first time you open a downloaded copy, macOS asks for confirmation: right-click Cera and choose Open, or allow it in System Settings ▸ Privacy &amp; Security. A copy you build yourself opens right away.</p>
+</section>
+
+<footer>
+  <span>Cera is named for the wax of Roman writing tablets: smooth it over and write again.</span>
+  <a href="https://github.com/plattnum/cera">Source on GitHub</a>
+</footer>
+
+</div>
+<script>
+  // The demo starts with one line in edit mode; pointing at or focusing any line takes over.
+  const lines = document.querySelectorAll(".line");
+  const release = () => lines.forEach((line) => line.classList.remove("editing"));
+  lines.forEach((line) => {
+    line.addEventListener("pointerenter", release, { once: true });
+    line.addEventListener("focus", release, { once: true });
+  });
+
+  const captions = {
+    midnight: "Midnight: dark slate, Lucida Grande headings.",
+    plain: "Plain: a clean white page with Open Sans.",
+    broadsheet: "Broadsheet: PT Serif on warm newsprint.",
+    airy: "Airy: light Merriweather text with heavy Lato headings.",
+    ivory: "Ivory: centered Vollkorn headings and justified text.",
+    grotesk: "Grotesk: geometric type with uppercase titles."
+  };
+  const shot = document.getElementById("theme-shot");
+  const caption = document.getElementById("theme-caption");
+  document.querySelectorAll(".themes button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const theme = button.dataset.theme;
+      document.querySelectorAll(".themes button").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+      shot.src = `images/theme-${theme}.png`;
+      shot.alt = `Cera's ${button.textContent} theme showing a sample document`;
+      caption.textContent = captions[theme];
+    });
+  });
+</script>
+</body>
+</html>

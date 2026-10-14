@@ -92,11 +92,18 @@ struct MarkdownStyler {
         scratch.setAttributes(bodyAttributes(), range: NSRange(location: 0, length: scratch.length))
         let context = StyleContext(storage: scratch, theme: theme, caret: localCaret, baseURL: baseURL, availableWidth: availableWidth)
         context.joinsHardWrappedLines = joinsHardWrappedLines
+        context.regionLength = region.length
+        // Whether the line just before this region has text (so its first block follows a block).
+        if region.location > 0 {
+            let previous = text.lineRange(for: NSRange(location: region.location - 1, length: 0))
+            context.precededByLine = !text.substring(with: previous).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
         context.styleBlankLines()
         let document = Document(parsing: source)
         context.blockRanges = Self.blockRanges(of: document, in: context.text, map: context.map)
         var walker = StyleWalker(context: context)
         walker.visit(document)
+        context.dimDefinitionLines()
         context.finish()
         scratch.endEditing()
 
@@ -281,7 +288,7 @@ struct MarkdownStyler {
         return regions
     }
 
-    private static let definitionRegex = try! NSRegularExpression(pattern: "^ {0,3}\\[[^\\]\\n]+\\]:")
+    fileprivate static let definitionRegex = try! NSRegularExpression(pattern: "^ {0,3}\\[[^\\]\\n]+\\]:")
 
     /// Whether `region` holds an odd number of code fence lines, i.e. leaves a fence
     /// open, which can change how everything after it parses.
@@ -374,6 +381,7 @@ private struct StyleWalker: MarkupWalker {
     }
 
     mutating func visitText(_ text: Text) {
+        context.hideEscapes(in: text)
         context.styleBareURLs(in: text)
     }
 }
@@ -412,6 +420,10 @@ private final class StyleContext {
     /// The line ranges of the document's top-level blocks, indexed like its children.
     var blockRanges: [NSRange] = []
     var joinsHardWrappedLines = false
+    /// Whether the line just before this region (in the document) has text.
+    var precededByLine = false
+    /// The region's length, without the link definitions appended after it for parsing.
+    var regionLength = Int.max
     /// Space added after hidden code-span backticks, applied once markers are hidden.
     private var paddingKerns: [(location: Int, amount: CGFloat)] = []
 
@@ -795,7 +807,18 @@ private final class StyleContext {
     }
 
     func styleDelimited(_ markup: Markup, as kind: Emphasis) {
-        guard let range = range(markup), range.length > 1 else { return }
+        guard var range = range(markup), range.length > 1 else { return }
+        // In ***text***, the parser reports the inner node with its parent's range;
+        // step inside the markers of enclosing nodes that start at the same place.
+        var inset = 0
+        var ancestor = markup.parent
+        while let outer = ancestor, outer is Markdown.Emphasis || outer is Strong || outer is Strikethrough,
+              self.range(outer)?.location == range.location {
+            inset += outer is Markdown.Emphasis ? 1 : 2
+            ancestor = outer.parent
+        }
+        guard range.length > 2 * inset + 1 else { return }
+        range = NSRange(location: range.location + inset, length: range.length - 2 * inset)
         let delimiter = text.character(at: range.location)
         var width = 0
         let limit = kind == .italic ? 1 : 2
@@ -845,6 +868,40 @@ private final class StyleContext {
     }
 
     /// Web addresses typed as plain text become links, like GitHub's autolinks.
+    /// A backslash before punctuation escapes it; the backslash is syntax and hides.
+    func hideEscapes(in textNode: Text) {
+        guard let range = range(textNode), range.length > 1 else { return }
+        var index = range.location
+        while index < NSMaxRange(range) - 1 {
+            if text.character(at: index) == 92, let scalar = Unicode.Scalar(text.character(at: index + 1)),
+               CharacterSet.punctuationCharacters.union(.symbols).contains(scalar) {
+                addMarker(NSRange(location: index, length: 1))
+                index += 2
+            } else {
+                index += 1
+            }
+        }
+    }
+
+    /// Link reference definitions (`[id]: url`) aren't shown in rendered Markdown; here they
+    /// stay visible for editing, dimmed like other syntax.
+    func dimDefinitionLines() {
+        var gapStart = 0
+        func scan(_ gap: NSRange) {
+            guard gap.length > 0 else { return }
+            for line in lines(in: gap) where line.length > 0 {
+                if MarkdownStyler.definitionRegex.firstMatch(in: source, options: .anchored, range: line) != nil {
+                    storage.addAttribute(.foregroundColor, value: theme.marker, range: line)
+                }
+            }
+        }
+        for block in blockRanges where block.length > 0 {
+            scan(NSRange(location: gapStart, length: max(0, block.location - gapStart)))
+            gapStart = max(gapStart, NSMaxRange(block))
+        }
+        scan(NSRange(location: gapStart, length: max(0, text.length - gapStart)))
+    }
+
     func styleBareURLs(in textNode: Text) {
         var node = textNode.parent
         while let current = node {
@@ -895,6 +952,30 @@ private final class StyleContext {
             storage.addAttribute(.kern, value: kern.amount, range: NSRange(location: kern.location, length: 1))
         }
         layoutTables()
+        separateAdjacentBlocks()
+    }
+
+    /// Blocks are separated by the theme's gap, like CSS margins. A blank line provides it;
+    /// when a block starts right after a non-blank line (a heading under a heading), it gets
+    /// the gap as space before it. Block starts are reliable in the parser's positions, and
+    /// the line before is read from the text, so this doesn't depend on where blocks end.
+    private func separateAdjacentBlocks() {
+        for block in blockRanges where block.length > 0 && block.location < regionLength {
+            let preceded: Bool
+            if block.location == 0 {
+                preceded = precededByLine
+            } else {
+                let previous = text.lineRange(for: NSRange(location: block.location - 1, length: 0))
+                preceded = !text.substring(with: previous).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+            let firstLine = text.lineRange(for: NSRange(location: block.location, length: 0))
+            guard preceded,
+                  let style = storage.attribute(.paragraphStyle, at: firstLine.location, effectiveRange: nil) as? NSParagraphStyle
+            else { continue }
+            let spaced = style.mutableCopy() as! NSMutableParagraphStyle
+            spaced.paragraphSpacingBefore = max(spaced.paragraphSpacingBefore, theme.blockSpacing)
+            storage.addAttribute(.paragraphStyle, value: spaced, range: firstLine)
+        }
     }
 
     private func hideMarkers() {

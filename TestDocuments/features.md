@@ -1,0 +1,101 @@
+Cera Feature Tour
+=================
+
+Every Markdown feature Cera renders, in one place. Move the cursor onto a line to see its Markdown; move away and it renders again.
+
+## Text
+
+Plain text with **bold**, *italic*, ***bold italic***, ~~strikethrough~~, and `inline code`.
+A line ending in two spaces  
+makes a line break, and \*escaped\* characters stay literal.
+
+## Headings
+
+# Heading 1
+## Heading 2
+### Heading 3
+#### Heading 4
+##### Heading 5
+###### Heading 6
+
+Underlined heading
+------------------
+
+## Links
+
+- Inline: [Cera on the web](https://example.com "A title")
+- Reference: [the CommonMark spec][spec]
+- Autolink: <https://commonmark.org>
+- Bare address: https://github.com
+- Relative file: [the syntax guide](markdown-syntax-guide.md)
+
+⌘-click a link to open it.
+
+[spec]: https://spec.commonmark.org
+
+## Lists
+
+- Bullets
+- With nesting
+  - Second level
+    - Third level
+- Back to the top
+
+3. Numbered lists
+4. Can start at any number
+5. And keep counting
+
+- [ ] An open task
+- [x] A finished task
+
+## Quotes
+
+> A quote with **formatting**.
+>
+> > And a nested quote inside it.
+>
+> - Even a list
+
+## Code
+
+```swift
+// A fenced block with a language gets syntax colors.
+let greeting = "Hello, Cera"
+print(greeting, 42)
+```
+
+```bash
+# Shell comments are highlighted too
+echo "done" && exit 0
+```
+
+    An indented code block,
+    four spaces in.
+
+## Table
+
+| Feature  | Status | Notes            |
+|:---------|:------:|-----------------:|
+| Tables   | **yes**| right-aligned    |
+| Images   | yes    | `local` and web  |
+| Tasks    | yes    | checkboxes       |
+
+## Images
+
+An image on its own line is drawn in place:
+
+![Cera icon](../Design/icons/AppIcon-1024.png)
+
+An image inside a sentence shows its alt text: ![inline picture](../Design/icons/AppIcon-1024.png).
+
+---
+
+## HTML
+
+<div align="center">Raw HTML shows as dimmed source.</div>
+
+## A hard-wrapped paragraph
+
+This paragraph is hard-wrapped, the way many plain-text files are written,
+with a line break every seventy characters or so. Cera keeps these line
+breaks, like Typora; turn on View ▸ Flow Hard-Wrapped Paragraphs to join them.

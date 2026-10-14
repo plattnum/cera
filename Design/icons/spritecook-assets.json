@@ -1,0 +1,41 @@
+{
+  "project": "Cera app icon",
+  "assets": [
+    {
+      "asset_id": "bc630ee5-4c3b-432b-8ad8-e52dd6997e2b",
+      "file": "1-wax-tablet.png",
+      "sha12": "a672223f0707",
+      "label": "Cera icon 1 - wax tablet"
+    },
+    {
+      "asset_id": "f2010e6c-feef-410d-bc19-81e66a5d9e04",
+      "file": "2-slate-amber-hash.png",
+      "sha12": "a2eb11fb9df6",
+      "label": "Cera icon 2 - slate amber hash"
+    },
+    {
+      "asset_id": "22275851-128e-4dab-9dc0-d1cd33159c49",
+      "file": "3-wax-seal.png",
+      "sha12": "554aa67105fc",
+      "label": "Cera icon 3 - wax seal"
+    },
+    {
+      "asset_id": "3d9bed7e-9b65-4b3a-be9b-ecb159bb425e",
+      "file": "4-notepad-page.png",
+      "sha12": "80fc7496d805",
+      "label": "Cera icon 4 - notepad page"
+    },
+    {
+      "asset_id": "d96a1a17-ede7-47f3-885d-22f85b9367d4",
+      "file": "5-stylus-nib.png",
+      "sha12": "2e2033b7f8ce",
+      "label": "Cera icon 5 - stylus nib"
+    },
+    {
+      "asset_id": "e3f278c3-e47a-441b-a21b-494fdc8383cf",
+      "file": "3-wax-seal-fullbleed.png",
+      "sha12": "4ae11a24ab04",
+      "label": "Cera app icon - wax seal, full-bleed (used for AppIcon)"
+    }
+  ]
+}

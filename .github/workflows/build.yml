@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # to attach Cera.zip to a release when a v* tag is pushed
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Test
+        run: swift test
+
+      - name: Build Cera.app
+        run: ./scripts/bundle.sh --zip
+
+      - name: Upload Cera.app
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cera
+          path: build/Cera.zip
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" build/Cera.zip --title "Cera $GITHUB_REF_NAME" --generate-notes

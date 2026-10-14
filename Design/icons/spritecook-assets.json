@@ -35,7 +35,13 @@
       "asset_id": "e3f278c3-e47a-441b-a21b-494fdc8383cf",
       "file": "3-wax-seal-fullbleed.png",
       "sha12": "4ae11a24ab04",
-      "label": "Cera app icon - wax seal, full-bleed (used for AppIcon)"
+      "label": "Cera icon 3 - wax seal, full-bleed"
+    },
+    {
+      "asset_id": "eac30f43-e1aa-5df7-9c91-5b9a7810babd",
+      "file": "1-wax-tablet-cutout.png",
+      "sha12": "1bb34d1f06f8",
+      "label": "Cera app icon - wax tablet, background removed (used for AppIcon)"
     }
   ]
 }

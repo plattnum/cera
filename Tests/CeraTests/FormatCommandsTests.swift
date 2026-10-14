@@ -173,7 +173,10 @@ final class FormatCommandsTests: XCTestCase {
             view.subviews.flatMap { ($0 as? NSButton).map { [$0] } ?? buttons(in: $0) }
         }
         let eraser = try XCTUnwrap(buttons(in: bar).first { $0.toolTip?.hasPrefix("Clear Formatting") == true })
-        XCTAssertTrue(bar.bounds.contains(eraser.convert(eraser.bounds, to: bar)), "the eraser is fully inside the bar")
+        // A click on the middle of the eraser reaches the eraser, not the text underneath.
+        bar.layoutSubtreeIfNeeded()
+        let center = eraser.convert(NSPoint(x: eraser.bounds.midX, y: eraser.bounds.midY), to: view)
+        XCTAssertTrue(view.hitTest(center) === eraser, "a click on the eraser reaches it")
         eraser.performClick(nil)
         XCTAssertEqual(view.string, "Some bold text")
     }

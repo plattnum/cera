@@ -1,5 +1,5 @@
 #!/bin/sh
-# Opens a file in Cera from the terminal: cera [file]
+# Opens files in Cera from the terminal, each in its own window: cera [file ...]
 # A file that doesn't exist yet is created empty first, so `cera notes.md` starts a new note.
 
 # Open the Cera.app this script ships in (Contents/Resources/cera), not whichever copy of
@@ -13,9 +13,7 @@ esac
 if [ $# -eq 0 ]; then
     exec open -a "$app"
 fi
-if [ $# -gt 1 ]; then
-    echo "usage: cera [file]  (Cera opens one file at a time)" >&2
-    exit 64
-fi
-[ -e "$1" ] || : > "$1" || exit 1
-exec open -a "$app" -- "$1"
+for file in "$@"; do
+    [ -e "$file" ] || : > "$file" || exit 1
+done
+exec open -a "$app" -- "$@"

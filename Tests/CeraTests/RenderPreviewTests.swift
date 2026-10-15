@@ -91,8 +91,7 @@ final class RenderPreviewTests: XCTestCase {
     }
 
     private func renderWindow(file: URL, height: Double, to output: URL) throws {
-        let document = DocumentModel()
-        document.open(url: file)
+        let document = MarkdownDocument(text: try String(contentsOf: file, encoding: .utf8))
 
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 950, height: height),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -100,7 +99,7 @@ final class RenderPreviewTests: XCTestCase {
         window.isReleasedWhenClosed = false
         window.title = file.lastPathComponent
         window.representedURL = file
-        window.contentViewController = NSHostingController(rootView: ContentView(document: document))
+        window.contentViewController = NSHostingController(rootView: ContentView(document: document, fileURL: file))
         window.setContentSize(NSSize(width: 950, height: height))
         window.layoutIfNeeded()
         // Let SwiftUI and the text system finish their passes.

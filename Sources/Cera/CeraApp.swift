@@ -2,11 +2,17 @@ import SwiftUI
 
 @main
 struct CeraApp: App {
+    init() {
+        // Start with an empty document, like Notepad, instead of an Open panel.
+        UserDefaults.standard.register(defaults: ["NSShowAppCentricOpenPanelInsteadOfUntitledFile": false])
+    }
+
     var body: some Scene {
-        WindowGroup {
-            // Files opened from Finder go to an existing window when there is one, instead of a new one.
-            ContentView()
-                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
+        // The system's document architecture provides the File menu (New, Open, Open Recent,
+        // Save, Duplicate, Rename, Move To, Revert), autosave, and the title bar popover for
+        // naming the file and choosing where it lives.
+        DocumentGroup(newDocument: { MarkdownDocument() }) { file in
+            ContentView(document: file.document, fileURL: file.fileURL)
         }
         .defaultSize(width: 900, height: 700)
         // Don't reopen last session's windows; each launch starts clean.
@@ -17,40 +23,14 @@ struct CeraApp: App {
     }
 }
 
-/// Menu bar items. File actions go to the focused document; formatting actions
-/// are sent down the responder chain to the editor that has focus.
+/// Menu bar items. Formatting actions are sent down the responder chain to the
+/// editor that has focus.
 struct CeraCommands: Commands {
-    @FocusedObject private var document: DocumentModel?
-    @ObservedObject private var recents = RecentDocuments.shared
     @AppStorage("theme") private var themeChoice: ThemeChoice = .midnight
     @AppStorage("checksSpelling") private var checksSpelling = false
     @AppStorage("joinsHardWrappedLines") private var joinsHardWrappedLines = false
 
     var body: some Commands {
-        CommandGroup(replacing: .newItem) {
-            Button("New") { document?.newDocument() }
-                .keyboardShortcut("n")
-            Button("Open…") { document?.openFile() }
-                .keyboardShortcut("o")
-            Menu("Open Recent") {
-                ForEach(recents.urls, id: \.self) { url in
-                    Button(recents.title(for: url)) { document?.open(url: url) }
-                }
-                if !recents.urls.isEmpty {
-                    Divider()
-                }
-                Button("Clear Menu") { recents.clear() }
-                    .disabled(recents.urls.isEmpty)
-            }
-        }
-
-        CommandGroup(replacing: .saveItem) {
-            Button("Save") { document?.save() }
-                .keyboardShortcut("s")
-            Button("Save As…") { document?.saveAs() }
-                .keyboardShortcut("s", modifiers: [.command, .shift])
-        }
-
         CommandGroup(after: .textEditing) {
             Toggle("Check Spelling While Typing", isOn: $checksSpelling)
         }

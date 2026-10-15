@@ -62,8 +62,8 @@ Then open Cera from Spotlight, Launchpad, or Finder, and use **Open With ▸ Cer
 
 ### The `cera` terminal command
 
-`cera notes.md` opens a file in Cera from the terminal; a file that doesn't exist yet is
-created empty. Homebrew installs the command for you. For a source install, link it onto
+`cera notes.md` opens a file in Cera from the terminal (`cera a.md b.md` opens each in its
+own window); a file that doesn't exist yet is created empty. Homebrew installs the command for you. For a source install, link it onto
 your PATH once:
 
 ```sh
@@ -91,8 +91,8 @@ Artifacts).
 To publish a release, tag a version and push the tag:
 
 ```sh
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 The workflow then creates a GitHub Release with `Cera.zip` attached.
@@ -119,23 +119,21 @@ Builds made on your own Mac are not affected.
 - Return continues lists and quotes; Return on an empty item ends the list.
 - Select text and a floating format bar appears: bold, italic, strikethrough, code, link, heading, quote, lists, and clear formatting.
 - Format menu: Bold (⌘B), Italic (⌘I), Strikethrough (⇧⌘X), Inline Code (⌘E), Link (⌘K), Clear Formatting (⌘\); Heading ▸ Paragraph (⌘0), Heading 1–6 (⌘1–⌘6), larger/smaller (⌘= / ⌘-); List ▸ Bulleted (⌥⌘U), Numbered (⌥⌘O), Task (⌥⌘X), Indent/Outdent (⌘] / ⌘[, or Tab / Shift-Tab in a list); Quote (⌥⌘Q); Insert ▸ Image… (⌃⌘I), Table (⌥⌘T), Code Block (⌥⌘C), Horizontal Rule (⌥⌘-). Each command applies to every selected line and toggles off when applied again.
-- File ▸ Open Recent remembers the last 10 files.
 - Hard-wrapped paragraphs keep their line breaks, like Typora. View ▸ Flow Hard-Wrapped Paragraphs joins them into full paragraphs instead (the paragraph you're editing still shows its real line breaks).
 - Built for large files: typing only restyles the blocks around the edit, and a big file shows its first screen right away while the rest is styled in the background. On a 10 MB document a keystroke costs about 10 ms.
-- New, Open, Save, and Save As. New and Open ask before discarding unsaved changes.
+- Standard Mac document handling: each file opens in its own window, and changes save automatically. Click the window title to name a new document and choose where it's saved, or to rename, move, tag, or lock a saved one. File ▸ Open Recent, Duplicate, Rename, Move To, and Revert To (including earlier versions) work as in TextEdit; hold Option in the File menu for Save As.
 - Spell checking is off by default; turn it on with Edit ▸ Check Spelling While Typing. Autocorrect is always off.
 
 ## Layout
 
 - `Sources/Cera/CeraApp.swift`: app entry point and menu commands
-- `Sources/Cera/ContentView.swift`: window contents, theme, and title bar
-- `Sources/Cera/DocumentModel.swift`: document text, file I/O, and unsaved-change handling
+- `Sources/Cera/ContentView.swift`: window contents and theme
+- `Sources/Cera/MarkdownDocument.swift`: the Markdown file type, reading, and saving
 - `Sources/Cera/MarkdownEditor.swift`: bridge between SwiftUI and the text view
 - `Sources/Cera/MarkdownTextView.swift`: editing behavior (Return, formatting)
 - `Sources/Cera/MarkdownStyler.swift`: parses the document and styles each element, a region at a time
 - `Sources/Cera/LiveStyler.swift`: keeps styling current while editing, restyling only what changed
-- `Sources/Cera/FormatCommands.swift`, `FormatBar.swift`: heading, list, quote, and insert commands, and the floating format bar
-- `Sources/Cera/RecentDocuments.swift`: File ▸ Open Recent
+- `Sources/Cera/FormatCommands.swift`, `FormatBar.swift`, `InlineMarkup.swift`: heading, list, quote, insert, and clear-formatting commands, and the floating format bar
 - `Sources/Cera/SourceMap.swift`: maps parser positions to text offsets
 - `Sources/Cera/ImageStore.swift`: loads and caches images
 - `Sources/Cera/ImageImporter.swift`: decides image paths and copies images into `assets/`
@@ -149,8 +147,6 @@ Builds made on your own Mac are not affected.
 
 ## Known limitations
 
-- There is no autosave. Save with ⌘S.
-- Closing a window with unsaved changes does not prompt.
 - No export (HTML, PDF), no outline view, no source-only mode yet.
 - A table row shows its Markdown source while the cursor is on it; table cells don't wrap.
 - An image inside a line of text shows its alt text instead of the picture.

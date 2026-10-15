@@ -9,6 +9,8 @@ struct MarkdownEditor: NSViewRepresentable {
     var baseURL: URL?
     var checksSpelling = false
     var joinsHardWrappedLines = false
+    /// The document's undo manager. Edits registered on it mark the document as edited.
+    var undoManager: UndoManager?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -96,6 +98,11 @@ struct MarkdownEditor: NSViewRepresentable {
             } else {
                 pendingEdit = (editedRange, delta)
             }
+        }
+
+        /// Typing and formatting commands register their undo actions with the document.
+        func undoManager(for view: NSTextView) -> UndoManager? {
+            parent.undoManager ?? view.window?.undoManager
         }
 
         func textDidChange(_ notification: Notification) {

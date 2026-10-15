@@ -14,6 +14,10 @@ Cera is for **one file at a time**: the README in a repository, meeting notes so
 
 It is **not** a second brain. It does not replace Obsidian, Bear, Logseq, or other note-taking systems and their excellent features. There are no vaults, no folder or project sidebar, no backlinks, tags, or sync. That's deliberate: like Notepad, it opens a file, and that's the whole model. If you want a knowledge base, use one of those tools. If you just want to open a Markdown file and have it look right, use Cera.
 
+## How it was made
+
+To be upfront: Cera is mostly vibe coded. I wanted a quick and dirty Markdown viewer and editor for my Mac, and built it largely by directing an AI coding assistant rather than writing every line by hand. It has tests and I use it daily, but it hasn't had the scrutiny of a carefully engineered app. Expect rough edges, and keep backups of anything important.
+
 ## Requirements
 
 - macOS 15 or later.

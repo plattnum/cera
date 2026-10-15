@@ -155,3 +155,7 @@ Builds made on your own Mac are not affected.
 - A table row shows its Markdown source while the cursor is on it; table cells don't wrap.
 - An image inside a line of text shows its alt text instead of the picture.
 - Raw HTML is shown as dimmed source, not rendered.
+
+## License
+
+MIT. See [LICENSE](LICENSE). The bundled fonts keep their own licenses, included next to them in `Sources/Cera/Resources/Fonts/`.

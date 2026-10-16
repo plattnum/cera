@@ -101,15 +101,18 @@ git tag v0.3.0
 git push origin v0.3.0
 ```
 
-The workflow then signs Cera with the Developer ID, has Apple notarize it, and creates a
-GitHub Release with `Cera.zip` attached. It reads the certificate and notary login from
-these repository secrets:
+The workflow then signs Cera with the Developer ID, has Apple notarize it, creates a GitHub
+Release with `Cera.zip` attached, and points the
+[Homebrew cask](https://github.com/plattnum/homebrew-cera) at it. It stops if the tag
+doesn't match the version in `Info.plist`. It uses these repository secrets:
 
 - `DEVELOPER_ID_P12`: the Developer ID Application certificate and key, exported from
   Keychain Access as a `.p12` and base64-encoded
 - `DEVELOPER_ID_P12_PASSWORD`: the password the `.p12` was exported with
 - `NOTARY_APPLE_ID` and `NOTARY_PASSWORD`: an Apple ID on the team and an app-specific
   password for it
+- `HOMEBREW_TAP_DEPLOY_KEY`: the private half of a deploy key with write access to
+  `plattnum/homebrew-cera`
 
 To make a signed, notarized build on your own Mac instead, save notary credentials once
 with `xcrun notarytool store-credentials cera-notary --apple-id <you> --team-id <team>`,

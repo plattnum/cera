@@ -38,6 +38,11 @@ jobs:
           NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
           NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
         run: |
+          version="$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Resources/Info.plist)"
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match version $version in Resources/Info.plist"
+            exit 1
+          fi
           for name in DEVELOPER_ID_P12 DEVELOPER_ID_P12_PASSWORD NOTARY_APPLE_ID NOTARY_PASSWORD; do
             [ -n "${!name}" ] || { echo "::error::Missing repository secret $name"; exit 1; }
           done
@@ -71,3 +76,28 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" build/Cera.zip --title "Cera $GITHUB_REF_NAME" --generate-notes
+
+      # Points the Homebrew cask at the new release. A deploy key that can push only to
+      # plattnum/homebrew-cera comes from a repository secret.
+      - name: Update Homebrew cask
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
+        run: |
+          [ -n "$TAP_DEPLOY_KEY" ] || { echo "::error::Missing repository secret HOMEBREW_TAP_DEPLOY_KEY"; exit 1; }
+          version="${GITHUB_REF_NAME#v}"
+          sha256="$(shasum -a 256 build/Cera.zip | cut -d ' ' -f 1)"
+          key="$RUNNER_TEMP/tap_deploy_key"
+          trap 'rm -f "$key"' EXIT
+          printf '%s\n' "$TAP_DEPLOY_KEY" > "$key"
+          chmod 600 "$key"
+          export GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+          git clone -q git@github.com:plattnum/homebrew-cera.git "$RUNNER_TEMP/tap"
+          cd "$RUNNER_TEMP/tap"
+          sed -i '' -e "s/^  version \".*\"/  version \"$version\"/" \
+                    -e "s/^  sha256 \".*\"/  sha256 \"$sha256\"/" Casks/cera.rb
+          git diff --quiet && { echo "Cask already at $version"; exit 0; }
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -qam "Cera $version"
+          git push -q

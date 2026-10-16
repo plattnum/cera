@@ -50,8 +50,8 @@ brew install --cask plattnum/cera/cera
 
 **Download:** get `Cera.zip` from the
 [latest release](https://github.com/plattnum/cera/releases/latest), unzip it, and move
-`Cera.app` to Applications. See [Opening a downloaded build](#opening-a-downloaded-build)
-for the first launch.
+`Cera.app` to Applications. Releases are signed with a Developer ID and notarized by
+Apple, so Cera opens like any other downloaded app.
 
 **From source:**
 
@@ -94,27 +94,33 @@ Every push to `main` runs `.github/workflows/build.yml` on a GitHub-hosted Mac: 
 tests, builds the app, and attaches `Cera.zip` to the run (Actions tab ▸ the run ▸
 Artifacts).
 
-To publish a release, tag a version and push the tag:
+To publish a release, set the version in `Resources/Info.plist`, then tag it and push the tag:
 
 ```sh
-git tag v0.2.0
-git push origin v0.2.0
+git tag v0.3.0
+git push origin v0.3.0
 ```
 
-The workflow then creates a GitHub Release with `Cera.zip` attached.
+The workflow then signs Cera with the Developer ID, has Apple notarize it, and creates a
+GitHub Release with `Cera.zip` attached. It reads the certificate and notary login from
+these repository secrets:
 
-### Opening a downloaded build
+- `DEVELOPER_ID_P12`: the Developer ID Application certificate and key, exported from
+  Keychain Access as a `.p12` and base64-encoded
+- `DEVELOPER_ID_P12_PASSWORD`: the password the `.p12` was exported with
+- `NOTARY_APPLE_ID` and `NOTARY_PASSWORD`: an Apple ID on the team and an app-specific
+  password for it
 
-Builds are signed ad hoc, not with an Apple Developer ID, so macOS blocks a *downloaded*
-copy the first time it is opened. After unzipping, either right-click **Cera.app ▸ Open**
-and confirm, or allow it under **System Settings ▸ Privacy & Security ▸ Open Anyway**.
-Removing the download flag also works:
+To make a signed, notarized build on your own Mac instead, save notary credentials once
+with `xcrun notarytool store-credentials cera-notary --apple-id <you> --team-id <team>`,
+then run `./scripts/bundle.sh --release`.
+
+Builds from pushes to `main` are signed ad hoc, so macOS blocks a *downloaded* copy of one.
+To open it anyway, remove the download flag:
 
 ```sh
-xattr -dr com.apple.quarantine /Applications/Cera.app
+xattr -dr com.apple.quarantine Cera.app
 ```
-
-Builds made on your own Mac are not affected.
 
 ## Features
 

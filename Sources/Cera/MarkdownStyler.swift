@@ -628,7 +628,12 @@ private final class StyleContext {
 
         let indent = indent(for: paragraph)
         let maxWidth = max(40, availableWidth - indent)
-        let scale = min(1, maxWidth / picture.size.width)
+        var scale: CGFloat = 1
+        if let (width, height) = ImageSize.requested(alt: image.plainText) {
+            scale = width / picture.size.width
+            if let height { scale = min(scale, height / picture.size.height) }
+        }
+        scale = min(scale, maxWidth / picture.size.width)
         let size = NSSize(width: (picture.size.width * scale).rounded(), height: (picture.size.height * scale).rounded())
 
         addMarker(range)

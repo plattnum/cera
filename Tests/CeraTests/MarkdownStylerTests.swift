@@ -130,6 +130,50 @@ final class MarkdownStylerTests: XCTestCase {
         XCTAssertEqual(block.size.width, 100, accuracy: 1)
     }
 
+    /// Writes a 100×50 PNG to a fresh folder as `pic.png`, styles `source` against it,
+    /// and returns the image block drawn for the first line.
+    private func imageBlock(for source: String, availableWidth: CGFloat = 760) throws -> ImageBlock {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let image = NSImage(size: NSSize(width: 100, height: 50), flipped: false) { rect in
+            NSColor.red.setFill(); rect.fill(); return true
+        }
+        let png = try XCTUnwrap(NSBitmapImageRep(data: try XCTUnwrap(image.tiffRepresentation))?
+            .representation(using: .png, properties: [:]))
+        try png.write(to: folder.appendingPathComponent("pic.png"))
+
+        let storage = NSTextStorage(string: source + "\n\nlast")
+        MarkdownStyler(theme: theme).style(storage, caret: storage.length, baseURL: folder,
+                                           availableWidth: availableWidth)
+        return try XCTUnwrap(storage.attribute(.imageBlock, at: 0, effectiveRange: nil) as? ImageBlock)
+    }
+
+    func testImageWidthAfterPipeShrinksImage() throws {
+        let block = try imageBlock(for: "![pic|50](pic.png)")
+        XCTAssertEqual(block.size, NSSize(width: 50, height: 25))
+    }
+
+    func testImageWidthAfterPipeEnlargesImage() throws {
+        let block = try imageBlock(for: "![pic|300](pic.png)")
+        XCTAssertEqual(block.size, NSSize(width: 300, height: 150))
+    }
+
+    func testImageWidthAfterPipeStaysWithinColumn() throws {
+        let block = try imageBlock(for: "![pic|2000](pic.png)", availableWidth: 400)
+        XCTAssertEqual(block.size, NSSize(width: 400, height: 200))
+    }
+
+    func testImageWidthAndHeightAfterPipeFitImageInsideBoxKeepingShape() throws {
+        let block = try imageBlock(for: "![pic|60x60](pic.png)")
+        XCTAssertEqual(block.size, NSSize(width: 60, height: 30))
+    }
+
+    func testImagePipeWithoutNumberKeepsNaturalSize() throws {
+        let block = try imageBlock(for: "![this|that](pic.png)")
+        XCTAssertEqual(block.size, NSSize(width: 100, height: 50))
+    }
+
     func testMissingImageFallsBackToAltText() {
         let source = "![alt text](does-not-exist.png)\n\nlast"
         let storage = style(source, caret: (source as NSString).length)

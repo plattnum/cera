@@ -25,7 +25,40 @@ jobs:
         run: swift test
 
       - name: Build Cera.app
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         run: ./scripts/bundle.sh --zip
+
+      # Releases are signed with the Developer ID and notarized, so downloads open without
+      # a Gatekeeper warning. The certificate and notary password come from repository secrets.
+      - name: Build, sign, and notarize Cera.app
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          DEVELOPER_ID_P12: ${{ secrets.DEVELOPER_ID_P12 }}
+          DEVELOPER_ID_P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: |
+          for name in DEVELOPER_ID_P12 DEVELOPER_ID_P12_PASSWORD NOTARY_APPLE_ID NOTARY_PASSWORD; do
+            [ -n "${!name}" ] || { echo "::error::Missing repository secret $name"; exit 1; }
+          done
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(uuidgen)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          printf '%s' "$DEVELOPER_ID_P12" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          security import "$RUNNER_TEMP/developer-id.p12" -k "$keychain" -f pkcs12 \
+            -P "$DEVELOPER_ID_P12_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/developer-id.p12"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          xcrun notarytool store-credentials cera-notary --keychain "$keychain" \
+            --apple-id "$NOTARY_APPLE_ID" --team-id NEFPW9V798 --password "$NOTARY_PASSWORD"
+          CERA_NOTARY_KEYCHAIN="$keychain" ./scripts/bundle.sh --release
+
+      - name: Remove signing keychain
+        if: always() && startsWith(github.ref, 'refs/tags/v')
+        run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
 
       - name: Upload Cera.app
         uses: actions/upload-artifact@v7

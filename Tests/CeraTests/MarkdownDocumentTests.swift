@@ -15,7 +15,7 @@ final class MarkdownDocumentTests: XCTestCase {
     func testMarkdownTypeMatchesFileExtensions() {
         XCTAssertEqual(UTType.markdown.identifier, "net.daringfireball.markdown")
         XCTAssertTrue(UTType.markdown.conforms(to: .plainText))
-        XCTAssertEqual(MarkdownDocument.writableContentTypes.first, .markdown, "new documents save as Markdown")
+        XCTAssertEqual(MarkdownDocument.writableContentTypes.first, UTType.markdown, "new documents save as Markdown")
     }
 
     /// Typing must register undo on the document's undo manager: that is what marks the

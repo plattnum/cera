@@ -50,13 +50,14 @@ struct MarkdownEditor: NSViewRepresentable {
         if textView.isContinuousSpellCheckingEnabled != checksSpelling {
             textView.isContinuousSpellCheckingEnabled = checksSpelling
         }
-        // Only replace the text when it changed elsewhere (Open, New). Replacing it
-        // while typing would move the insertion point.
-        if textView.string != text || textView.theme.name != theme.name || context.coordinator.baseURL != baseURL
+        // Only replace the text when it changed elsewhere (Open, New, or the file changing
+        // on disk). Replacing it while typing would move the insertion point; replacing
+        // just the part that changed, styled like typing, keeps the caret and the text in view.
+        if textView.string != text {
+            textView.replaceTextKeepingPosition(with: text) { context.coordinator.styleChangedText() }
+        }
+        if textView.theme.name != theme.name || context.coordinator.baseURL != baseURL
             || context.coordinator.joinsHardWrappedLines != joinsHardWrappedLines {
-            if textView.string != text {
-                textView.string = text
-            }
             context.coordinator.restyle()
         }
     }
@@ -108,6 +109,12 @@ struct MarkdownEditor: NSViewRepresentable {
         func textDidChange(_ notification: Notification) {
             guard let textView else { return }
             parent.text = textView.string
+            styleChangedText()
+        }
+
+        /// Restyles just the blocks around the latest change to the text.
+        func styleChangedText() {
+            guard let textView else { return }
             let caret = textView.selectedRange().location
             if let edit = pendingEdit, let liveStyler {
                 pendingEdit = nil

@@ -1,6 +1,7 @@
 #!/bin/sh
 # Opens files in Cera from the terminal, each in its own window: cera [file ...]
 # A file that doesn't exist yet is created empty first, so `cera notes.md` starts a new note.
+# An image opens as a throwaway Markdown file in $TMPDIR that shows it, so `cera shot.png` views it.
 
 # Open the Cera.app this script ships in (Contents/Resources/cera), not whichever copy of
 # Cera Launch Services finds first; outside an app bundle, fall back to Cera by name.
@@ -14,6 +15,20 @@ if [ $# -eq 0 ]; then
     exec open -a "$app"
 fi
 for file in "$@"; do
+    shift
+    case "$(printf '%s' "$file" | tr '[:upper:]' '[:lower:]')" in
+        *.png|*.jpg|*.jpeg|*.gif|*.heic|*.webp|*.tif|*.tiff|*.bmp)
+            [ -f "$file" ] || { echo "cera: no such image: $file" >&2; exit 1; }
+            path=$(realpath "$file")
+            name=$(basename "$path")
+            # Link destinations can't hold spaces or stray parentheses; Cera decodes these.
+            encoded=$(printf '%s' "$path" | sed 's/%/%25/g; s/ /%20/g; s/(/%28/g; s/)/%29/g')
+            dir=$(mktemp -d "${TMPDIR:-/tmp}/cera.XXXXXX") || exit 1
+            file="$dir/${name%.*}.md"
+            printf '![%s](%s)\n' "${name%.*}" "$encoded" > "$file" || exit 1
+            ;;
+    esac
     [ -e "$file" ] || : > "$file" || exit 1
+    set -- "$@" "$file"
 done
 exec open -a "$app" -- "$@"

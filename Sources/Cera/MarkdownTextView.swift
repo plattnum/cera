@@ -238,18 +238,97 @@ final class MarkdownTextView: NSTextView {
 
     override func menu(for event: NSEvent) -> NSMenu? {
         let menu = super.menu(for: event) ?? NSMenu()
-        guard let url = linkURL(at: event) else { return menu }
-
-        let open = NSMenuItem(title: "Open Link", action: #selector(openLink(_:)), keyEquivalent: "")
-        let copy = NSMenuItem(title: "Copy Link", action: #selector(copyLink(_:)), keyEquivalent: "")
-        for item in [open, copy] {
-            item.target = self
-            item.representedObject = url
+        Self.removeUnwantedItems(from: menu)
+        if let url = linkURL(at: event) {
+            let open = NSMenuItem(title: "Open Link", action: #selector(openLink(_:)), keyEquivalent: "")
+            let copy = NSMenuItem(title: "Copy Link", action: #selector(copyLink(_:)), keyEquivalent: "")
+            for item in [open, copy] {
+                item.target = self
+                item.representedObject = url
+            }
+            menu.insertItem(open, at: 0)
+            menu.insertItem(copy, at: 1)
+            menu.insertItem(.separator(), at: 2)
+        } else if let sizes = imageSizeMenu(at: convert(event.locationInWindow, from: nil)) {
+            let item = NSMenuItem(title: "Image Size", action: nil, keyEquivalent: "")
+            item.submenu = sizes
+            menu.insertItem(item, at: 0)
+            menu.insertItem(.separator(), at: 1)
         }
-        menu.insertItem(open, at: 0)
-        menu.insertItem(copy, at: 1)
-        menu.insertItem(.separator(), at: 2)
         return menu
+    }
+
+    /// The font and color panels do nothing in a plain-text editor, and vertical layout
+    /// breaks a Markdown document, so the system's text menu loses those items.
+    private static func removeUnwantedItems(from menu: NSMenu) {
+        let unwanted: Set<Selector> = [
+            #selector(NSTextView.changeLayoutOrientation(_:)),
+            #selector(NSFontManager.orderFrontFontPanel(_:)),
+            #selector(NSApplication.orderFrontColorPanel(_:)),
+        ]
+        for item in menu.items {
+            if let action = item.action, unwanted.contains(action) {
+                menu.removeItem(item)
+            } else if let submenu = item.submenu {
+                removeUnwantedItems(from: submenu)
+                if submenu.items.allSatisfy(\.isSeparatorItem) { menu.removeItem(item) }
+            }
+        }
+        // Drop separators left at either end or next to each other.
+        for item in menu.items.reversed() where item.isSeparatorItem {
+            let index = menu.index(of: item)
+            if index == 0 || index == menu.numberOfItems - 1 || menu.items[index - 1].isSeparatorItem {
+                menu.removeItem(item)
+            }
+        }
+    }
+
+    /// Never lay the document out vertically; the menu no longer offers it, but other paths might.
+    override func setLayoutOrientation(_ orientation: NSLayoutManager.TextLayoutOrientation) {
+        super.setLayoutOrientation(.horizontal)
+    }
+
+    // MARK: - Image size
+
+    /// A size choice from an image's right-click menu: the image's line and the line rewritten.
+    private struct ImageSizeChoice {
+        let range: NSRange
+        let line: String
+    }
+
+    /// The Image Size submenu for a point on a line holding only an image, or nil.
+    private func imageSizeMenu(at point: NSPoint) -> NSMenu? {
+        guard let layoutManager, let textContainer, let textStorage, textStorage.length > 0 else { return nil }
+        let containerPoint = NSPoint(x: point.x - textContainerOrigin.x, y: point.y - textContainerOrigin.y)
+        let glyph = layoutManager.glyphIndex(for: containerPoint, in: textContainer)
+        guard layoutManager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil).contains(containerPoint) else { return nil }
+
+        let text = string as NSString
+        var start = 0, contentsEnd = 0
+        text.getLineStart(&start, end: nil, contentsEnd: &contentsEnd,
+                          for: NSRange(location: layoutManager.characterIndexForGlyph(at: glyph), length: 0))
+        let range = NSRange(location: start, length: contentsEnd - start)
+        guard let image = ImageLine(text.substring(with: range)) else { return nil }
+
+        let menu = NSMenu()
+        for size in ImageSize.allCases {
+            let item = NSMenuItem(title: size.title, action: #selector(chooseImageSize(_:)), keyEquivalent: "")
+            item.target = self
+            item.state = image.width == size.width ? .on : .off
+            item.representedObject = ImageSizeChoice(range: range, line: image.settingWidth(size.width))
+            menu.addItem(item)
+        }
+        return menu
+    }
+
+    @objc private func chooseImageSize(_ sender: NSMenuItem) {
+        guard let choice = sender.representedObject as? ImageSizeChoice else { return }
+        // Keep the caret where it was, shifted if it sits after the rewritten line.
+        let caret = selectedRange()
+        let shift = (choice.line as NSString).length - choice.range.length
+        let location = caret.location >= NSMaxRange(choice.range) ? caret.location + shift
+            : min(caret.location, choice.range.location + (choice.line as NSString).length)
+        edit(choice.range, with: choice.line, selection: NSRange(location: location, length: 0))
     }
 
     @objc private func openLink(_ sender: NSMenuItem) {

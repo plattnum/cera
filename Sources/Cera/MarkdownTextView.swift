@@ -102,12 +102,18 @@ final class MarkdownTextView: NSTextView {
     /// Called when the text column's width changes, so images and tables can be resized.
     var onWidthChange: (() -> Void)?
 
+    /// The reading position waiting to be put back after a change, by `keepReadingPosition`.
+    var heldReadingPosition: ReadingPosition?
+
     /// The document's top-level block ranges, kept current by the editor's styler.
     /// Formatting commands parse whole blocks, so Markdown is read in its real context.
     var topLevelBlocks: () -> [NSRange] = { [] }
 
     override func setFrameSize(_ newSize: NSSize) {
         let widthChanged = newSize.width != frame.width
+        // A new width rewraps the text; keep the text in view in place, as when the outline
+        // opens. While the user drags the window's edge, AppKit's own behavior is left alone.
+        if widthChanged, !inLiveResize { keepReadingPosition() }
         super.setFrameSize(newSize)
         updateColumnInsets()
         if widthChanged {

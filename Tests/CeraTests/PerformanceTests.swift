@@ -42,4 +42,45 @@ final class PerformanceTests: XCTestCase {
                          mb, open, background, keystroke * 1000, newline * 1000, caret * 1000))
         }
     }
+
+    /// Finding the outline's headings, and jumping to one far down.
+    @MainActor
+    func testMeasureOutline() throws {
+        guard let path = ProcessInfo.processInfo.environment["CERA_PERF_FILE"] else { throw XCTSkip("Set CERA_PERF_FILE.") }
+        let unit = try String(contentsOfFile: path, encoding: .utf8)
+        for copies in [100, 1000] {
+            let source = Array(repeating: unit, count: copies).joined(separator: "\n\n")
+            let mb = Double(source.utf8.count) / 1_048_576
+            var start = Date()
+            let items = Outline.items(in: source)
+            let parse = Date().timeIntervalSince(start)
+
+            let (scrollView, textView) = MarkdownEditor.makeScrollView()
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 700), styleMask: [.titled],
+                                  backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            defer { window.close() }
+            window.contentView = scrollView
+            textView.string = source
+            let styler = LiveStyler(storage: textView.textStorage!, settings: .init(theme: .midnight, baseURL: nil, availableWidth: 760))
+            styler.restyleAll(caret: 0)
+            styler.finishBackgroundStyling(caret: 0)
+            let model = OutlineModel()
+            model.textView = textView
+            model.update(text: source, immediately: true)
+
+            start = Date()
+            model.jump(to: items.count / 2)
+            let middle = Date().timeIntervalSince(start)
+            start = Date()
+            model.jump(to: items.count - 1)
+            let last = Date().timeIntervalSince(start)
+            start = Date()
+            for _ in 0..<100 { model.visibleAreaChanged() }
+            let current = Date().timeIntervalSince(start) / 100
+
+            print(String(format: "PERF %5.1f MB  %d headings: find %.0fms  jump to middle %.0fms  then to last %.0fms  current section %.2fms",
+                         mb, items.count, parse * 1000, middle * 1000, last * 1000, current * 1000))
+        }
+    }
 }

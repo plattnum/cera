@@ -132,6 +132,8 @@ extension MarkdownTextView {
         let change = TextChange(from: string, to: text)
         // At the very top, stay at the top, so text added there is seen.
         let top = visibleRect.minY - textContainerOrigin.y
+        // This sets the position itself; a restyle along the way mustn't put back an older one.
+        defer { heldReadingPosition = nil }
         guard let layoutManager, let textContainer, top > 0 else {
             replaceText(with: text)
             restyle()

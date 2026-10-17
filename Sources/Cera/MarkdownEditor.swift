@@ -11,6 +11,8 @@ struct MarkdownEditor: NSViewRepresentable {
     var joinsHardWrappedLines = false
     /// The document's undo manager. Edits registered on it mark the document as edited.
     var undoManager: UndoManager?
+    /// The outline sidebar's model, told when the editor scrolls.
+    var outline: OutlineModel?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -37,6 +39,8 @@ struct MarkdownEditor: NSViewRepresentable {
         textView.textStorage?.delegate = context.coordinator
 
         context.coordinator.textView = textView
+        outline?.textView = textView
+        context.coordinator.observeScrolling(of: scrollView)
 
         textView.string = text
         context.coordinator.restyle()
@@ -46,6 +50,7 @@ struct MarkdownEditor: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         guard let textView = scrollView.documentView as? MarkdownTextView else { return }
         context.coordinator.parent = self
+        outline?.textView = textView
         textView.documentFolder = baseURL
         if textView.isContinuousSpellCheckingEnabled != checksSpelling {
             textView.isContinuousSpellCheckingEnabled = checksSpelling
@@ -75,6 +80,7 @@ struct MarkdownEditor: NSViewRepresentable {
         private(set) var baseURL: URL?
         private(set) var joinsHardWrappedLines = false
         private var imageObserver: NSObjectProtocol?
+        private var scrollObserver: NSObjectProtocol?
 
         init(parent: MarkdownEditor) {
             self.parent = parent
@@ -87,6 +93,17 @@ struct MarkdownEditor: NSViewRepresentable {
 
         deinit {
             if let imageObserver { NotificationCenter.default.removeObserver(imageObserver) }
+            if let scrollObserver { NotificationCenter.default.removeObserver(scrollObserver) }
+        }
+
+        /// Tells the outline when the text in view changes: on scrolling and resizing.
+        func observeScrolling(of scrollView: NSScrollView) {
+            let clipView = scrollView.contentView
+            clipView.postsBoundsChangedNotifications = true
+            scrollObserver = NotificationCenter.default.addObserver(
+                forName: NSView.boundsDidChangeNotification, object: clipView, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.parent.outline?.visibleAreaChanged() }
+            }
         }
 
         // MARK: Edits
@@ -145,6 +162,8 @@ struct MarkdownEditor: NSViewRepresentable {
         func restyle() {
             scheduledRestyle?.cancel()
             guard let textView, let storage = textView.textStorage else { return }
+            // Restyling changes line heights; keep the text in view where it is.
+            textView.keepReadingPosition()
             textView.apply(parent.theme)
             baseURL = parent.baseURL
             joinsHardWrappedLines = parent.joinsHardWrappedLines

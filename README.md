@@ -132,6 +132,7 @@ xattr -dr com.apple.quarantine Cera.app
 - Size an image with Obsidian's pipe syntax: `![photo|300](photo.png)` shows it 300 points wide, keeping its shape, and `![photo|300x200](photo.png)` fits it inside that box. A size can enlarge a small image but never goes past the column width. Right-click an image's line for Image Size ▸ Small (300), Medium (500), Large (700), or Original Size, which writes the size into the Markdown for you.
 - Add images by dragging files onto the page, pasting (⌘V, including screenshots), or Format ▸ Image… (⌃⌘I). An image already in the document's folder is linked by relative path; one from anywhere else is copied into an `assets/` folder next to the document. Untitled documents link files by absolute path, and pasted screenshots need the document saved first.
 - Links open with ⌘-click (or right-click ▸ Open Link). A plain click edits the link text.
+- View ▸ Show Outline (⌃⌘S) opens a sidebar listing the document's headings. Click one to jump to it; the section you're reading stays highlighted as you scroll, and the list updates as you type or when the file changes on disk. New windows open with the outline shown or hidden as you last left it.
 - Follows changes made to the open file on disk, such as an agent editing it: the window shows the new text within a moment, keeping the caret and the text in view in place. If the window has unsaved edits, a banner asks first: Keep Mine saves your version over the file, Load from Disk discards your edits. Saving over a changed file still brings up the system's "changed by another application" alert.
 - Return continues lists and quotes; Return on an empty item ends the list.
 - Select text and a floating format bar appears: bold, italic, strikethrough, code, link, heading, quote, lists, and clear formatting.
@@ -156,6 +157,7 @@ xattr -dr com.apple.quarantine Cera.app
 - `Sources/Cera/ImageImporter.swift`: decides image paths and copies images into `assets/`
 - `Sources/Cera/ImageSize.swift`: reads and rewrites an image's `|size`
 - `Sources/Cera/DiskSync.swift`: watches the open file and reloads it when it changes on disk
+- `Sources/Cera/Outline.swift`: the outline sidebar, and keeping the reading position when the text is laid out again
 - `Sources/Cera/LinkResolver.swift`: turns link destinations into openable URLs
 - `Sources/Cera/MarkdownLayoutManager.swift`: draws bullets, checkboxes, code panels, quote bars, and rules
 - `Sources/Cera/Theme.swift`: fonts, colors, and layout for each theme
@@ -166,7 +168,7 @@ xattr -dr com.apple.quarantine Cera.app
 
 ## Known limitations
 
-- No export (HTML, PDF), no outline view, no source-only mode yet.
+- No export (HTML, PDF), no source-only mode yet.
 - A table row shows its Markdown source while the cursor is on it; table cells don't wrap.
 - An image inside a line of text shows its alt text instead of the picture.
 - Raw HTML is shown as dimmed source, not rendered.

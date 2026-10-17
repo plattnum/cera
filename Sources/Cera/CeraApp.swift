@@ -29,10 +29,17 @@ struct CeraCommands: Commands {
     @AppStorage("theme") private var themeChoice: ThemeChoice = .midnight
     @AppStorage("checksSpelling") private var checksSpelling = false
     @AppStorage("joinsHardWrappedLines") private var joinsHardWrappedLines = false
+    @FocusedBinding(\.showsOutline) private var showsOutline
 
     var body: some Commands {
         CommandGroup(after: .textEditing) {
             Toggle("Check Spelling While Typing", isOn: $checksSpelling)
+        }
+
+        CommandGroup(replacing: .sidebar) {
+            Button(showsOutline == true ? "Hide Outline" : "Show Outline") { showsOutline?.toggle() }
+                .keyboardShortcut("s", modifiers: [.command, .control])
+                .disabled(showsOutline == nil)
         }
 
         CommandGroup(after: .toolbar) {

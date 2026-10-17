@@ -1,0 +1,9 @@
+#ifndef TREE_SITTER_PYTHON_H
+#define TREE_SITTER_PYTHON_H
+
+typedef struct TSLanguage TSLanguage;
+
+/// The python grammar, from tree-sitter/tree-sitter-python.
+const TSLanguage *tree_sitter_python(void);
+
+#endif

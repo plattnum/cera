@@ -95,13 +95,16 @@ extension MarkdownTextView {
     }
 
     /// Nests list items one level deeper. Lines that aren't list items are left alone.
+    /// In a code block, indents the code lines instead.
     @objc func indentList(_ sender: Any?) {
+        if shiftCodeLines(deeper: true) { return }
         transformSelectedLines { lines in
             lines.map { self.listKind(of: $0) == nil ? $0 : "    " + $0 }
         }
     }
 
     @objc func outdentList(_ sender: Any?) {
+        if shiftCodeLines(deeper: false) { return }
         transformSelectedLines { lines in
             lines.map { line in
                 guard self.listKind(of: line) != nil else { return line }
@@ -112,8 +115,9 @@ extension MarkdownTextView {
         }
     }
 
-    /// Tab and Shift-Tab indent and outdent while the cursor is in a list.
+    /// Tab and Shift-Tab indent and outdent while the cursor is in a list or a code block.
     override func insertTab(_ sender: Any?) {
+        if insertTabInCode() { return }
         if selectedLines().contains(where: { listKind(of: $0) != nil }) {
             indentList(sender)
         } else {
@@ -122,6 +126,7 @@ extension MarkdownTextView {
     }
 
     override func insertBacktab(_ sender: Any?) {
+        if shiftCodeLines(deeper: false) { return }
         if selectedLines().contains(where: { listKind(of: $0) != nil }) {
             outdentList(sender)
         } else {

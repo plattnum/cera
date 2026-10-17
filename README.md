@@ -4,7 +4,7 @@
 
 Cera is a quick WYSIWYG Markdown viewer and editor for macOS. Markdown renders as you type: headings, bold, italic, code, links, lists, and checkboxes look like a finished document, and the syntax markers appear only on the line you are editing. Files stay plain `.md` text.
 
-Pick a look from the **Themes** menu: Midnight (dark), Plain, Broadsheet, Airy, Ivory, and Grotesk. Each theme sets its own fonts, colors, column width, heading style, and spacing. Code blocks are syntax-highlighted for common languages (shell, Python, JavaScript/TypeScript, Swift, Rust, Go, C-family, YAML/TOML).
+Pick a look from the **Themes** menu: Midnight (dark), Plain, Broadsheet, Airy, Ivory, and Grotesk. Each theme sets its own fonts, colors, column width, heading style, and spacing. Code blocks are syntax-highlighted with [tree-sitter](https://tree-sitter.github.io/tree-sitter/), using each language's real grammar: Bash, C, C++, C#, CSS, Diff, Go, HTML, Java, JavaScript (and JSX), JSON, Kotlin, Markdown, Python, Ruby, Rust, SQL, Swift, TOML, TypeScript (and TSX), and YAML.
 
 Written in Swift with SwiftUI for the window and AppKit's `NSTextView` for editing. Requires macOS 15 or later.
 
@@ -33,8 +33,21 @@ cd cera
 open build/Cera.app
 ```
 
-The first build downloads the one dependency, Apple's
-[swift-markdown](https://github.com/swiftlang/swift-markdown), and takes a minute.
+The first build downloads the dependencies, Apple's
+[swift-markdown](https://github.com/swiftlang/swift-markdown) and
+[SwiftTreeSitter](https://github.com/tree-sitter/swift-tree-sitter) with the
+[tree-sitter](https://github.com/tree-sitter/tree-sitter) runtime (syntax highlighting), and compiles the
+language grammars in `Grammars/`. It takes a couple of minutes.
+
+### Syntax highlighting grammars
+
+The tree-sitter grammars are copied into the repository, pinned to exact versions, by
+`scripts/update-grammars.sh`: each grammar's generated C parser goes in `Grammars/Sources/`, built by
+`Grammars/Package.swift`, and its highlight queries and license in `Sources/Cera/Resources/Queries/`.
+`Grammars/grammars.lock` records the commit each came from. To add or update a grammar, edit the list at
+the top of the script and run it, then add the language to `Sources/Cera/CodeLanguages.swift`.
+`Sources/Cera/Resources/Queries/cera/` holds Cera's own small corrections to the upstream queries; the
+script leaves it alone.
 
 To develop in Xcode, open the package: `open -a Xcode Package.swift`, choose the **Cera**
 scheme with **My Mac**, and press ⌘R. (Xcode runs the bare executable; use
@@ -136,6 +149,10 @@ xattr -dr com.apple.quarantine Cera.app
 - View ▸ Show Outline (⌃⌘S) opens a sidebar listing the document's headings. Click one to jump to it; the section you're reading stays highlighted as you scroll, and the list updates as you type or when the file changes on disk. New windows open with the outline shown or hidden as you last left it.
 - Follows changes made to the open file on disk, such as an agent editing it: the window shows the new text within a moment, keeping the caret and the text in view in place. If the window has unsaved edits, a banner asks first: Keep Mine saves your version over the file, Load from Disk discards your edits. Saving over a changed file still brings up the system's "changed by another application" alert.
 - Return continues lists and quotes; Return on an empty item ends the list.
+- Code blocks are highlighted with tree-sitter, using each language's real grammar (see the list at the top), in every theme's colors: keywords, types, function names, strings, numbers, comments, constants, HTML tags, JSON and YAML keys, and added and removed lines in a diff. Code inside quotes and lists is highlighted too. Languages are recognized by their usual names and aliases after the fence (`py`, `js`, `ts`, `sh`, `rs`, `cs`, `c#`, `yml`…). A few other languages (PHP, Scala, Dart, and more) get simple keyword colors.
+- Each code block shows its language in small text in its top-right corner; hovering swaps it for the copy button.
+- Type ```` ``` ```` at the start of a line and a list of languages appears; type to narrow it (`py` finds Python), then Return or Tab to choose. Return also opens the block with its closing fence. Return straight away, without choosing, makes a plain block; Escape closes the list.
+- Inside a fenced code block, typing works like a code editor: Return keeps the line's indentation (and never adds list bullets), Tab and Shift-Tab (or ⌘] and ⌘[) indent and outdent the selected lines, and Return after an opening fence such as ```` ```swift ```` adds the closing fence. The indent matches the block's own (tabs, or its smallest indent), or the language's usual one: a tab for Go; two spaces for JavaScript, TypeScript, Ruby, HTML, CSS, JSON, Markdown, and YAML; four otherwise. Code blocks inside quotes and lists keep their `>` markers and indentation.
 - Select text and a floating format bar appears: bold, italic, strikethrough, code, link, heading, quote, lists, and clear formatting.
 - Format menu: Bold (⌘B), Italic (⌘I), Strikethrough (⇧⌘X), Inline Code (⌘E), Link (⌘K), Clear Formatting (⌘\); Heading ▸ Paragraph (⌘0), Heading 1–6 (⌘1–⌘6), larger/smaller (⌘= / ⌘-); List ▸ Bulleted (⌥⌘U), Numbered (⌥⌘O), Task (⌥⌘X), Indent/Outdent (⌘] / ⌘[, or Tab / Shift-Tab in a list); Quote (⌥⌘Q); Insert ▸ Image… (⌃⌘I), Table (⌥⌘T), Code Block (⌥⌘C), Horizontal Rule (⌥⌘-). Each command applies to every selected line and toggles off when applied again.
 - Hard-wrapped paragraphs keep their line breaks, like Typora. View ▸ Flow Hard-Wrapped Paragraphs joins them into full paragraphs instead (the paragraph you're editing still shows its real line breaks).
@@ -162,11 +179,20 @@ xattr -dr com.apple.quarantine Cera.app
 - `Sources/Cera/LinkResolver.swift`: turns link destinations into openable URLs
 - `Sources/Cera/MarkdownLayoutManager.swift`: draws bullets, checkboxes, code panels, quote bars, and rules
 - `Sources/Cera/Theme.swift`: fonts, colors, and layout for each theme
-- `Sources/Cera/CodeHighlighter.swift`: syntax colors inside fenced code blocks
+- `Sources/Cera/SyntaxHighlighter.swift`: tree-sitter syntax highlighting, and which theme color each kind of code gets
+- `Sources/Cera/CodeLanguages.swift`: the highlighted languages, their names and aliases, grammars, and queries
+- `Sources/Cera/CodeHighlighter.swift`: simple keyword colors for languages without a grammar
+- `Sources/Cera/CodeEditing.swift`: Return, Tab, and closing fences inside code blocks
+- `Sources/Cera/CodeLanguagePicker.swift`: the language list after ```` ``` ````
+- `Grammars/`: the tree-sitter grammars, copied in by `scripts/update-grammars.sh`
+- `Sources/Cera/Resources/Queries/`: each grammar's highlight queries and license
 - `Sources/Cera/CodeCopy.swift`: the copy button on code blocks, and reading a block's code without its fences
 - `Sources/Cera/FontRegistry.swift`: loads the bundled theme fonts
 - `Sources/Cera/Resources/Fonts/`: PT Serif, Merriweather, Lato, Vollkorn, Open Sans (SIL Open Font License) and TeX Gyre Adventor (GUST Font License), with their license files
 - `Tests/CeraTests/`: tests that run against a real text view
+
+The app bundle carries the license notices of the libraries built into it in `Contents/Resources/Licenses/`,
+and each grammar's license next to its queries.
 
 ## Known limitations
 

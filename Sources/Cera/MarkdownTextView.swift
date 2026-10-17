@@ -113,6 +113,14 @@ final class MarkdownTextView: NSTextView {
 
     /// The button shown in the corner of the code block under the pointer (see CodeCopy.swift).
     var codeCopyButton: CodeCopyButton?
+    /// While the language list is open. It runs its own event loop, in which typing comes back
+    /// through `insertText`; that typing updates the open list rather than opening another.
+    var isOfferingLanguages = false
+    /// The start of the fence line where the language list was dismissed with Escape; it isn't
+    /// offered again on that line.
+    var languagesDismissedOnLine: Int?
+    /// Whether a name was chosen from the open language list.
+    var languageChosen = false
     /// Where Copy Code puts the code. Tests use their own, to leave the clipboard alone.
     var codeCopyPasteboard: NSPasteboard = .general
     private var hoverArea: NSTrackingArea?
@@ -399,6 +407,8 @@ final class MarkdownTextView: NSTextView {
     // MARK: - Return key
 
     override func insertNewline(_ sender: Any?) {
+        // In a code block, Return keeps the indentation and never continues lists or quotes.
+        if insertNewlineInCode() { return }
         let caret = selectedRange()
         let text = string as NSString
         let lineRange = text.lineRange(for: caret)

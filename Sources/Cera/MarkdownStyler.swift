@@ -433,6 +433,10 @@ private final class StyleContext {
     /// Quote markers, then the indentation of an indented code line (group 1).
     private static let codeIndentRegex = try! NSRegularExpression(pattern: "(?:[ \\t]*>[ \\t]?)*( {4}|\\t)")
     private static let quoteMarkerRegex = try! NSRegularExpression(pattern: "^[ \\t]*(>[ \\t]?)+")
+    /// A fence line, after any quote markers, list marker, and indentation: the fence
+    /// (group 1) and what follows it (group 2).
+    private static let fenceRegex = try! NSRegularExpression(
+        pattern: "(?:[ \\t]*>[ \\t]?|[ \\t]*(?:[-*+]|\\d+[.)])[ \\t]+|[ \\t])*(`{3,}|~{3,})(.*)")
     /// A web address in plain text; trailing punctuation is left out, as in GitHub autolinks.
     private static let bareURLRegex = try! NSRegularExpression(
         pattern: "(?:https?://|www\\.)[^\\s<>\\[\\]()]*[^\\s<>\\[\\]().,;:!?'\"]", options: [.caseInsensitive])
@@ -727,8 +731,7 @@ private final class StyleContext {
         ], range: lines)
 
         let opening = text.lineRange(for: NSRange(location: lines.location, length: 0))
-        let openingText = text.substring(with: opening).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard openingText.hasPrefix("```") || openingText.hasPrefix("~~~") else {
+        guard let openingFence = fence(onLine: opening), !block.code.hasPrefix(openingFence) else {
             // Indented code block: the four spaces of indentation are syntax, like a fence.
             for line in self.lines(in: range) {
                 if let match = Self.codeIndentRegex.firstMatch(in: source, options: .anchored, range: line) {
@@ -739,13 +742,16 @@ private final class StyleContext {
         }
 
         let closing = text.lineRange(for: NSRange(location: NSMaxRange(lines) - 1, length: 0))
-        let closingText = text.substring(with: closing).trimmingCharacters(in: .whitespacesAndNewlines)
-        let closed = closing.location > opening.location && (closingText.hasPrefix("```") || closingText.hasPrefix("~~~"))
+        let closed = closing.location > opening.location
+            && CodeBlockText.closingFence(of: block, in: text, opening: self.lines(in: opening).first ?? opening) != nil
+
+        // The language, as written, in the panel's corner; not while its fence line shows it.
+        if let language = block.language?.split(whereSeparator: \.isWhitespace).first, !onActiveLine(opening.location) {
+            storage.addAttribute(.codeLanguage, value: String(language), range: NSRange(location: lines.location, length: 1))
+        }
         let bodyEnd = closed ? closing.location : NSMaxRange(lines)
         if bodyEnd > NSMaxRange(opening) {
-            CodeHighlighter(colors: theme.syntax).highlight(
-                storage, text: text, range: NSRange(location: NSMaxRange(opening), length: bodyEnd - NSMaxRange(opening)),
-                language: block.language ?? "")
+            colorCode(block, body: NSRange(location: NSMaxRange(opening), length: bodyEnd - NSMaxRange(opening)))
         }
 
         // Fence lines are syntax. When not being edited they shrink to the panel's padding.
@@ -753,6 +759,63 @@ private final class StyleContext {
             addMarker(fence)
             storage.addAttribute(.paragraphStyle, value: MarkdownStyler.paragraph(lineHeight: theme.codePadding), range: fence)
         }
+    }
+
+    /// Syntax colors for a fenced block's code: tree-sitter for the languages it has a grammar
+    /// for, the simple keyword colorer for a few others and for blocks too long to parse.
+    func colorCode(_ block: CodeBlock, body: NSRange) {
+        if let language = CodeLanguages.language(info: block.language),
+           let runs = SyntaxHighlighter.shared.runs(for: block.code, language: language) {
+            apply(runs, code: block.code, body: body)
+            return
+        }
+        CodeHighlighter(colors: theme.syntax).highlight(storage, text: text, range: body,
+                                                        language: CodeLanguages.fenceName(info: block.language) ?? "")
+    }
+
+    /// Colors the body lines from runs measured in the block's code. The code is each body line
+    /// without the quote markers or list indentation that nest the block, so each code line is
+    /// the end of its body line; a line that isn't (tabs in a nesting prefix) is left uncolored.
+    private func apply(_ runs: [SyntaxRun], code: String, body: NSRange) {
+        guard !runs.isEmpty else { return }
+        let codeText = code as NSString
+        let bodyLines = lines(in: body)
+        var codeStart = 0
+        var next = 0 // The first run that could reach the current line.
+        for bodyLine in bodyLines {
+            guard codeStart < codeText.length else { break }
+            var codeEnd = codeText.range(of: "\n", range: NSRange(location: codeStart, length: codeText.length - codeStart)).location
+            if codeEnd == NSNotFound { codeEnd = codeText.length }
+            var contentEnd = codeEnd
+            if contentEnd > codeStart, codeText.character(at: contentEnd - 1) == 13 { contentEnd -= 1 } // \r
+            let codeLine = NSRange(location: codeStart, length: contentEnd - codeStart)
+            defer { codeStart = codeEnd + 1 }
+            guard codeLine.length > 0, codeLine.length <= bodyLine.length,
+                  text.substring(with: NSRange(location: NSMaxRange(bodyLine) - codeLine.length, length: codeLine.length))
+                    == codeText.substring(with: codeLine)
+            else { continue }
+            let offset = NSMaxRange(bodyLine) - NSMaxRange(codeLine)
+            while next < runs.count, runs[next].location + runs[next].length <= codeLine.location { next += 1 }
+            var index = next
+            while index < runs.count, runs[index].location < NSMaxRange(codeLine) {
+                let run = runs[index]
+                let start = max(run.location, codeLine.location), end = min(run.location + run.length, NSMaxRange(codeLine))
+                if start < end, let color = theme.syntax.color(for: run.role) {
+                    storage.addAttribute(.foregroundColor, value: color, range: NSRange(location: start + offset, length: end - start))
+                }
+                index += 1
+            }
+        }
+    }
+
+    /// The fence on a line, after any quote markers, list marker, and indentation, with what
+    /// follows it; nil when the line isn't a fence line. An indented code block whose first
+    /// line looks like a fence keeps that line in its code, which tells the two apart.
+    private func fence(onLine line: NSRange) -> String? {
+        let content = lines(in: line).first ?? line
+        guard let match = Self.fenceRegex.firstMatch(in: source, options: .anchored, range: content) else { return nil }
+        return text.substring(with: NSRange(location: match.range(at: 1).location,
+                                            length: NSMaxRange(content) - match.range(at: 1).location))
     }
 
     func styleHTML(_ html: Markup) {

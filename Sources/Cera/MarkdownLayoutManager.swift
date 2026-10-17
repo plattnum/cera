@@ -6,6 +6,9 @@ extension NSAttributedString.Key {
     /// Marks a code block, drawn as one panel behind its lines. The value is the
     /// panel's left edge (NSNumber), measured from the column's left edge.
     static let codeBlock = NSAttributedString.Key("CeraCodeBlock")
+    /// On a fenced code block's first character: the language name (String) to show in the
+    /// panel's top-right corner.
+    static let codeLanguage = NSAttributedString.Key("CeraCodeLanguage")
     /// Marks a quote line. The value lists the x of each quote bar ([CGFloat]), one per nesting level.
     static let quoteBar = NSAttributedString.Key("CeraQuoteBar")
     /// Marks an image paragraph. The value is an `ImageBlock`.
@@ -73,6 +76,9 @@ final class TableRowInfo: NSObject {
 /// uppercase headings.
 final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
     var theme: Theme = .midnight
+    /// The first character of the code block showing the copy button, whose corner the button
+    /// takes over from the language label.
+    var codeBlockWithCopyButton: Int?
 
     override init() {
         super.init()
@@ -167,6 +173,39 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
         panel.origin.x = container.lineFragmentPadding + panelX
         panel.size.width = container.size.width - 2 * container.lineFragmentPadding - panelX
         return (panel, block)
+    }
+
+    /// The rectangle (text container coordinates) of the language label of the code block whose
+    /// panel is `panel`, sized for `label`. It shares the copy button's corner: right-aligned with
+    /// it and centered on it.
+    static func languageLabelRect(for label: String, in panel: NSRect) -> NSRect {
+        let size = (label as NSString).size(withAttributes: [.font: languageLabelFont])
+        let width = ceil(size.width) + 12, height: CGFloat = 18
+        let buttonCenterY = panel.minY + 6 + CodeCopyButton.size.height / 2
+        return NSRect(x: panel.maxX - 6 - width, y: buttonCenterY - height / 2, width: width, height: height)
+    }
+
+    static let languageLabelFont = NSFont.systemFont(ofSize: 11)
+
+    /// Draws each code block's language label on top of its text, so it stays readable over a
+    /// long first line, as the copy button does.
+    override func drawGlyphs(forGlyphRange glyphsToShow: NSRange, at origin: NSPoint) {
+        super.drawGlyphs(forGlyphRange: glyphsToShow, at: origin)
+        guard let storage = textStorage else { return }
+        let characters = characterRange(forGlyphRange: glyphsToShow, actualGlyphRange: nil)
+        var drawn = Set<Int>()
+        storage.enumerateAttribute(.codeBlock, in: characters) { value, range, _ in
+            guard value != nil, let panel = codePanel(at: range.location), drawn.insert(panel.block.location).inserted,
+                  panel.block.location != codeBlockWithCopyButton,
+                  let label = storage.attribute(.codeLanguage, at: panel.block.location, effectiveRange: nil) as? String
+            else { return }
+            let chip = Self.languageLabelRect(for: label, in: panel.rect).offsetBy(dx: origin.x, dy: origin.y)
+            (theme.codePanel.alphaComponent > 0 ? theme.codePanel : theme.background).setFill()
+            NSBezierPath(roundedRect: chip, xRadius: 4, yRadius: 4).fill()
+            let attributes: [NSAttributedString.Key: Any] = [.font: Self.languageLabelFont, .foregroundColor: theme.marker]
+            let size = (label as NSString).size(withAttributes: attributes)
+            (label as NSString).draw(at: NSPoint(x: chip.midX - size.width / 2, y: chip.midY - size.height / 2), withAttributes: attributes)
+        }
     }
 
     override func drawBackground(forGlyphRange glyphsToShow: NSRange, at origin: NSPoint) {

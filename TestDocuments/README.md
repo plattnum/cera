@@ -3,6 +3,7 @@
 Files for checking how Cera renders Markdown. Open any of them in Cera.
 
 - `features.md`: every feature Cera renders, in one short document.
+- `code-languages.md`: a realistic example in each language syntax highlighting covers, for checking every color.
 - `markdown-syntax-guide.md`: John Gruber's Markdown syntax guide as a test page, from
   [mxstbr/markdown-test-file](https://github.com/mxstbr/markdown-test-file) (MIT License).
 - `large-1MB.md`, `large-10MB.md`: large documents for checking speed. They aren't

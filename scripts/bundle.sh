@@ -37,6 +37,15 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 # Theme fonts (open-licensed; their LICENSE files travel with them).
 cp -R Sources/Cera/Resources/Fonts "$APP/Contents/Resources/Fonts"
+# Syntax highlighting queries, each grammar's folder with its LICENSE.
+cp -R Sources/Cera/Resources/Queries "$APP/Contents/Resources/Queries"
+# License notices for the libraries built into the app.
+mkdir -p "$APP/Contents/Resources/Licenses"
+for package in .build/checkouts/*/; do
+    name=$(basename "$package")
+    license=$(ls "$package" | grep -i -m1 -E '^(licen[cs]e|copying)' || true)
+    [[ -n $license ]] && cp "$package$license" "$APP/Contents/Resources/Licenses/$name-LICENSE.txt"
+done
 # The `cera` terminal command; Homebrew links it onto the PATH.
 cp scripts/cera "$APP/Contents/Resources/cera"
 

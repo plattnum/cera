@@ -26,6 +26,31 @@ struct Theme {
         let number: NSColor
         let atom: NSColor
         let builtin: NSColor
+        let type: NSColor
+        let function: NSColor
+        /// HTML and JSX element names.
+        let tag: NSColor
+        /// Added and removed lines in a diff.
+        let inserted: NSColor
+        let deleted: NSColor
+
+        /// The color for a syntax role, or nil for body text.
+        func color(for role: SyntaxRole) -> NSColor? {
+            switch role {
+            case .comment: comment
+            case .string: string
+            case .keyword: keyword
+            case .number: number
+            case .atom: atom
+            case .builtin: builtin
+            case .type: type
+            case .function: function
+            case .tag: tag
+            case .inserted: inserted
+            case .deleted: deleted
+            case .plain: nil
+            }
+        }
     }
 
     let name: String
@@ -87,13 +112,17 @@ struct Theme {
     /// Colors of the dark code theme.
     static let darkSyntax = Syntax(
         comment: NSColor(hex: 0xDA924A), string: NSColor(hex: 0xD26B6B), keyword: NSColor(hex: 0xC88FD0),
-        number: NSColor(hex: 0x64AB8F), atom: NSColor(hex: 0x84B6CB), builtin: NSColor(hex: 0xF3B3F8)
+        number: NSColor(hex: 0x64AB8F), atom: NSColor(hex: 0x84B6CB), builtin: NSColor(hex: 0xF3B3F8),
+        type: NSColor(hex: 0xE5C07B), function: NSColor(hex: 0x7FB2F0), tag: NSColor(hex: 0xE0876A),
+        inserted: NSColor(hex: 0x8CC98A), deleted: NSColor(hex: 0xE57C7C)
     )
 
     /// The default light code colors.
     static let lightSyntax = Syntax(
         comment: NSColor(hex: 0xAA5500), string: NSColor(hex: 0xAA1111), keyword: NSColor(hex: 0x770088),
-        number: NSColor(hex: 0x116644), atom: NSColor(hex: 0x221199), builtin: NSColor(hex: 0x3300AA)
+        number: NSColor(hex: 0x116644), atom: NSColor(hex: 0x221199), builtin: NSColor(hex: 0x3300AA),
+        type: NSColor(hex: 0x008855), function: NSColor(hex: 0x0055AA), tag: NSColor(hex: 0x117700),
+        inserted: NSColor(hex: 0x229922), deleted: NSColor(hex: 0xCC3333)
     )
 
     // MARK: - Themes

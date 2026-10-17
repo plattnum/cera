@@ -47,6 +47,21 @@ final class RenderPreviewTests: XCTestCase {
     pnpm install "quoted" 42
     ```
 
+    ```mermaid
+    flowchart LR
+        A[Open a file] --> B{Markdown?}
+        B -->|Yes| C[Render it live]
+        B -->|No| D[Show plain text]
+    ```
+
+    ```mermaid
+    sequenceDiagram
+        participant U as User
+        participant C as Cera
+        U->>C: Open notes.md
+        C-->>U: Shows the diagram
+    ```
+
     Last line.
     """
 

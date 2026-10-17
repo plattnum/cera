@@ -33,17 +33,22 @@ final class ImageBlock: NSObject {
     let size: NSSize
     /// Left edge, measured from the column's left edge.
     let x: CGFloat
+    /// What the image shows, when it can be drawn again as a new image: a diagram's theme and
+    /// source. Two blocks with the same key draw the same thing, whichever image they hold.
+    let key: String?
 
-    init(image: NSImage, size: NSSize, x: CGFloat) {
+    init(image: NSImage, size: NSSize, x: CGFloat, key: String? = nil) {
         self.image = image
         self.size = size
         self.x = x
+        self.key = key
     }
 
     /// Equal when they draw the same thing, so restyling with an unchanged value is a no-op.
     override func isEqual(_ object: Any?) -> Bool {
-        guard let other = object as? ImageBlock else { return false }
-        return other.image === image && other.size == size && other.x == x
+        guard let other = object as? ImageBlock, other.size == size, other.x == x else { return false }
+        if let key, let otherKey = other.key { return key == otherKey }
+        return other.image === image
     }
 
     override var hash: Int { ObjectIdentifier(ImageBlock.self).hashValue }

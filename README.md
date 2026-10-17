@@ -21,7 +21,7 @@ To be upfront: Cera is mostly vibe coded. I wanted a quick and dirty Markdown vi
 ## Requirements
 
 - macOS 15 or later.
-- Xcode 16 or later (or its Command Line Tools), for Swift 5.9+ and the macOS SDK.
+- Xcode 26 or later (or its Command Line Tools), for Swift 6.2+ and the macOS SDK. MermaidKit needs Swift 6.2.
   Check with `swift --version`.
 
 ## Build and run
@@ -34,7 +34,8 @@ open build/Cera.app
 ```
 
 The first build downloads the dependencies, Apple's
-[swift-markdown](https://github.com/swiftlang/swift-markdown) and
+[swift-markdown](https://github.com/swiftlang/swift-markdown),
+[MermaidKit](https://github.com/2389-research/MermaidKit) (native Mermaid diagrams), and
 [SwiftTreeSitter](https://github.com/tree-sitter/swift-tree-sitter) with the
 [tree-sitter](https://github.com/tree-sitter/tree-sitter) runtime (syntax highlighting), and compiles the
 language grammars in `Grammars/`. It takes a couple of minutes.
@@ -145,6 +146,7 @@ xattr -dr com.apple.quarantine Cera.app
 - Size an image with Obsidian's pipe syntax: `![photo|300](photo.png)` shows it 300 points wide, keeping its shape, and `![photo|300x200](photo.png)` fits it inside that box. A size can enlarge a small image but never goes past the column width. Right-click an image's line for Image Size ▸ Small (300), Medium (500), Large (700), or Original Size, which writes the size into the Markdown for you.
 - Add images by dragging files onto the page, pasting (⌘V, including screenshots), or Format ▸ Image… (⌃⌘I). An image already in the document's folder is linked by relative path; one from anywhere else is copied into an `assets/` folder next to the document. Untitled documents link files by absolute path, and pasted screenshots need the document saved first.
 - Links open with ⌘-click (or right-click ▸ Open Link). A plain click edits the link text.
+- Mermaid diagrams: a ```` ```mermaid ```` code block shows as the diagram, drawn natively by [MermaidKit](https://github.com/2389-research/MermaidKit) (no web view or JavaScript) in the theme's colors, with labels the size of the body text, and scaled down when too wide for the column. Put the cursor in the block to edit its code; move away and the diagram comes back. A block MermaidKit can't draw, such as one with a syntax error, stays a code block. Flowcharts, sequence, class, state, ER, Gantt, pie, mindmap, journey, and more are supported; Mermaid's `classDef` and `style` colors are ignored.
 - Hover over a code block and a copy button appears in its corner; click it to copy just the code, without the fences (or the quote and list markers of a nested block). Right-click a code block for Copy Code.
 - View ▸ Show Outline (⌃⌘S) opens a sidebar listing the document's headings. Click one to jump to it; the section you're reading stays highlighted as you scroll, and the list updates as you type or when the file changes on disk. New windows open with the outline shown or hidden as you last left it.
 - Follows changes made to the open file on disk, such as an agent editing it: the window shows the new text within a moment, keeping the caret and the text in view in place. If the window has unsaved edits, a banner asks first: Keep Mine saves your version over the file, Load from Disk discards your edits. Saving over a changed file still brings up the system's "changed by another application" alert.
@@ -186,6 +188,7 @@ xattr -dr com.apple.quarantine Cera.app
 - `Sources/Cera/CodeLanguagePicker.swift`: the language list after ```` ``` ````
 - `Grammars/`: the tree-sitter grammars, copied in by `scripts/update-grammars.sh`
 - `Sources/Cera/Resources/Queries/`: each grammar's highlight queries and license
+- `Sources/Cera/MermaidDiagrams.swift`: draws ```` ```mermaid ```` blocks with MermaidKit in the theme's colors
 - `Sources/Cera/CodeCopy.swift`: the copy button on code blocks, and reading a block's code without its fences
 - `Sources/Cera/FontRegistry.swift`: loads the bundled theme fonts
 - `Sources/Cera/Resources/Fonts/`: PT Serif, Merriweather, Lato, Vollkorn, Open Sans (SIL Open Font License) and TeX Gyre Adventor (GUST Font License), with their license files

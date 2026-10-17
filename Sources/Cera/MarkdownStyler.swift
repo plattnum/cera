@@ -720,6 +720,7 @@ private final class StyleContext {
 
     func styleCodeBlock(_ block: CodeBlock) {
         guard let range = range(block), range.length > 0 else { return }
+        if styleMermaidDiagram(block, range: range) { return }
         let lines = text.lineRange(for: range)
         let base = indent(for: block)
         storage.addAttributes([
@@ -816,6 +817,33 @@ private final class StyleContext {
         guard let match = Self.fenceRegex.firstMatch(in: source, options: .anchored, range: content) else { return nil }
         return text.substring(with: NSRange(location: match.range(at: 1).location,
                                             length: NSMaxRange(content) - match.range(at: 1).location))
+    }
+
+    /// A closed ```mermaid block is drawn as its diagram while the cursor is elsewhere, like an
+    /// image: its first line takes the diagram's height and the rest collapse, with all the
+    /// text hidden. Returns false when the block isn't one, is being edited, or can't be drawn,
+    /// so it is styled as code.
+    func styleMermaidDiagram(_ block: CodeBlock, range: NSRange) -> Bool {
+        guard MermaidDiagrams.isMermaid(info: block.language), !containsActiveLine(range) else { return false }
+        let blockLines = lines(in: range)
+        guard blockLines.count >= 2, let first = blockLines.first,
+              Self.fenceRegex.firstMatch(in: source, options: .anchored, range: first) != nil,
+              CodeBlockText.closingFence(of: block, in: text, opening: first) != nil,
+              let picture = MermaidDiagrams.shared.image(for: block.code, theme: theme)
+        else { return false }
+
+        let indent = indent(for: block)
+        // Drawn so node labels match the body text, but never wider than the column.
+        let scale = min(MermaidDiagrams.scale(for: theme), max(40, availableWidth - indent) / picture.size.width)
+        let size = NSSize(width: (picture.size.width * scale).rounded(), height: (picture.size.height * scale).rounded())
+        let collapsed = MarkdownStyler.paragraph(lineHeight: 0.01)
+        for line in blockLines {
+            addMarker(line)
+            setParagraph(line == first ? MarkdownStyler.paragraph(lineHeight: size.height, indent: indent) : collapsed, over: line)
+        }
+        let key = "mermaid\u{0}" + theme.name + "\u{0}" + block.code
+        storage.addAttributes([.baselineOffset: 0, .imageBlock: ImageBlock(image: picture, size: size, x: indent, key: key)], range: first)
+        return true
     }
 
     func styleHTML(_ html: Markup) {

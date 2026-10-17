@@ -1,6 +1,15 @@
 {
   "pins" : [
     {
+      "identity" : "mermaidkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/2389-research/MermaidKit.git",
+      "state" : {
+        "revision" : "4ed6f8a7ede26301faacfe4313896e223040e3e9",
+        "version" : "2.4.0"
+      }
+    },
+    {
       "identity" : "swift-cmark",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/swiftlang/swift-cmark.git",

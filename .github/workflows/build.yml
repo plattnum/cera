@@ -13,6 +13,9 @@ permissions:
 jobs:
   build:
     runs-on: macos-15
+    env:
+      # MermaidKit needs Swift 6.2 or later; the image's default Xcode (16.4) has Swift 6.1.
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
     steps:
       - uses: actions/checkout@v7
 

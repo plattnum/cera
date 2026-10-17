@@ -78,6 +78,70 @@ final class PerformanceTests: XCTestCase {
                      open, background, small, inBig, nextToBig, caret, giant))
     }
 
+    /// A document with 200 different diagrams: opening, typing between them, moving into and
+    /// out of one, and changing theme. Run with CERA_PERF_MERMAID=1 in release mode.
+    func testMeasureMermaid() throws {
+        guard ProcessInfo.processInfo.environment["CERA_PERF_MERMAID"] == "1" else { throw XCTSkip("Set CERA_PERF_MERMAID=1.") }
+        let diagrams = (0..<200).map { i -> String in
+            switch i % 4 {
+            case 0: return "```mermaid\nflowchart TD\n  A\(i)[Start \(i)] --> B\(i){Choice}\n  B\(i) -->|yes| C\(i)[Do it]\n  B\(i) -->|no| D\(i)[Skip]\n```"
+            case 1: return "```mermaid\nsequenceDiagram\n  Alice->>Bob: Hello \(i)\n  Bob-->>Alice: Hi\n  Alice->>Bob: Bye\n```"
+            case 2: return "```mermaid\nclassDiagram\n  class Doc\(i) {\n    +String text\n    +save()\n  }\n  Doc\(i) <|-- Note\(i)\n```"
+            default: return "```mermaid\npie title Share \(i)\n  \"A\" : 40\n  \"B\" : 35\n  \"C\" : 25\n```"
+            }
+        }
+        let source = diagrams.map { "Some text before the diagram, to type into.\n\n\($0)" }.joined(separator: "\n\n") + "\n"
+        let storage = NSTextStorage(string: source)
+        let styler = LiveStyler(storage: storage, settings: .init(theme: .midnight, baseURL: nil, availableWidth: 760))
+
+        var start = Date()
+        styler.restyleAll(caret: 0)
+        styler.finishBackgroundStyling(caret: 0)
+        let open = Date().timeIntervalSince(start)
+
+        let middle = (source as NSString).range(of: "Some text", options: [], range: NSRange(location: storage.length / 2, length: storage.length / 2)).location
+        start = Date()
+        storage.replaceCharacters(in: NSRange(location: middle, length: 0), with: "x")
+        styler.textChanged(editedRange: NSRange(location: middle, length: 1), delta: 1, caret: middle + 1, previousLine: middle)
+        let keystroke = Date().timeIntervalSince(start)
+
+        let text = storage.string as NSString
+        let diagramLine = text.range(of: "```mermaid", options: [], range: NSRange(location: middle, length: text.length - middle)).location
+        start = Date()
+        styler.caretMoved(fromLineAt: middle, toLineAt: diagramLine, caret: diagramLine)
+        let intoDiagram = Date().timeIntervalSince(start)
+        start = Date()
+        styler.caretMoved(fromLineAt: diagramLine, toLineAt: middle, caret: middle)
+        let outOfDiagram = Date().timeIntervalSince(start)
+
+        start = Date()
+        styler.restyleAll(caret: middle, settings: .init(theme: .plain, baseURL: nil, availableWidth: 760))
+        styler.finishBackgroundStyling(caret: middle)
+        let theme = Date().timeIntervalSince(start)
+
+        // Drawing every diagram once, as scrolling past them all would (the images are vector).
+        var blocks: [ImageBlock] = []
+        storage.enumerateAttribute(.imageBlock, in: NSRange(location: 0, length: storage.length)) { value, _, _ in
+            if let block = value as? ImageBlock { blocks.append(block) }
+        }
+        let bitmap = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 1600, pixelsHigh: 1600, bitsPerSample: 8,
+                                                    samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                                    bytesPerRow: 0, bitsPerPixel: 0))
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: bitmap)
+        start = Date()
+        for block in blocks {
+            block.image.draw(in: NSRect(origin: .zero, size: block.size), from: .zero, operation: .sourceOver, fraction: 1,
+                             respectFlipped: true, hints: nil)
+        }
+        let draw = Date().timeIntervalSince(start)
+        NSGraphicsContext.restoreGraphicsState()
+
+        print(String(format: "MERMAID 200 diagrams: open %.0f ms, keystroke %.1f ms, into diagram %.1f ms, out %.1f ms, theme change %.0f ms, "
+                     + "drawing all %d %.1f ms",
+                     open * 1000, keystroke * 1000, intoDiagram * 1000, outOfDiagram * 1000, theme * 1000, blocks.count, draw * 1000))
+    }
+
     /// Finding the outline's headings, and jumping to one far down.
     @MainActor
     func testMeasureOutline() throws {

@@ -2,8 +2,8 @@ import AppKit
 
 /// The list of languages offered after typing ``` at the start of a code block.
 enum CodeLanguagePicker {
-    /// Names offered: the languages Cera highlights.
-    static let names: [String] = CodeLanguages.all.map(\.name).sorted()
+    /// Names offered: the languages Cera highlights, and Mermaid, which it draws.
+    static let names: [String] = (CodeLanguages.all.map(\.name) + ["mermaid"]).sorted()
 
     /// The names matching what has been typed after the fence: an exact name or alias first,
     /// then names starting with it, then the languages with an alias starting with it.

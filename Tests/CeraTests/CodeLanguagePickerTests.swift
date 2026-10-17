@@ -16,6 +16,7 @@ final class CodeLanguagePickerTests: XCTestCase {
 
     func testEverythingIsOfferedBeforeALetterIsTyped() {
         XCTAssertEqual(CodeLanguagePicker.candidates(for: ""), CodeLanguagePicker.names)
+        XCTAssertTrue(CodeLanguagePicker.names.contains("mermaid"))
         XCTAssertTrue(CodeLanguagePicker.names.contains("csharp"))
     }
 
@@ -116,6 +117,10 @@ final class CodeLanguagePickerTests: XCTestCase {
         XCTAssertNil(label(in: "Intro\n\n    indented code\n"))
         XCTAssertNil(label(in: "Intro\n\n```py\nx = 1\n```\n", caret: 8), "the fence line shows the language itself")
         XCTAssertEqual(label(in: "Intro\n\n```py\nx = 1\n```\n", caret: 13), "py", "editing the code keeps the label")
+    }
+
+    func testNoLabelOnADrawnDiagram() {
+        XCTAssertNil(label(in: "Intro\n\n```mermaid\nflowchart LR\n  A --> B\n```\n"))
     }
 
     func testLabelSitsInTheCopyButtonsCorner() {

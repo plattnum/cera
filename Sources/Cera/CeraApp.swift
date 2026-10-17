@@ -32,6 +32,11 @@ struct CeraCommands: Commands {
     @FocusedBinding(\.showsOutline) private var showsOutline
 
     var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Button("New Tab") { Self.newTab() }
+                .keyboardShortcut("t")
+        }
+
         CommandGroup(after: .textEditing) {
             Toggle("Check Spelling While Typing", isOn: $checksSpelling)
         }
@@ -128,5 +133,24 @@ struct CeraCommands: Commands {
 
     private func send(_ action: Selector) {
         NSApp.sendAction(action, to: nil, from: nil)
+    }
+
+    /// Opens a new document as a tab of the front document window, or in a window of its
+    /// own when no document window is open.
+    @MainActor
+    static func newTab() {
+        let documents = NSDocumentController.shared
+        // The main window, not the key one: a panel such as About can be key but never main.
+        guard let window = NSApp.mainWindow, documents.document(for: window) != nil,
+              window.tabbingMode != .disallowed else {
+            documents.newDocument(nil)
+            return
+        }
+        let existing = Set(NSApp.windows.map(ObjectIdentifier.init))
+        documents.newDocument(nil)
+        guard let tab = NSApp.windows.first(where: { !existing.contains(ObjectIdentifier($0)) && documents.document(for: $0) != nil })
+        else { return }
+        window.addTabbedWindow(tab, ordered: .above)
+        tab.makeKeyAndOrderFront(nil)
     }
 }

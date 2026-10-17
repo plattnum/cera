@@ -74,7 +74,12 @@ final class SyntaxHighlighter {
     private func highlight(_ code: String, length: Int, with engine: Engine) -> [SyntaxRun]? {
         guard length > 0 else { return [] }
         engine.parser.timeout = Self.parseTimeout
-        guard let tree = engine.parser.parse(code) else { return nil } // nil on timeout.
+        guard let tree = engine.parser.parse(code) else {
+            // A parser that times out keeps its half-done parse to resume on its next call, whatever
+            // text that call has; start the next one afresh.
+            engine.parser.reset()
+            return nil
+        }
         var roles = [UInt8](repeating: SyntaxRole.plain.rawValue, count: length)
         paint(&roles, captures: captures(of: engine, in: tree, code: code))
 
@@ -87,6 +92,8 @@ final class SyntaxHighlighter {
                 inline.parser.timeout = Self.parseTimeout
                 if let inlineTree = inline.parser.parse(code) {
                     paint(&roles, captures: captures(of: inline, in: inlineTree, code: code))
+                } else {
+                    inline.parser.reset()
                 }
             }
         }

@@ -321,9 +321,20 @@ final class CodeHighlighterTests: XCTestCase {
         defer { SyntaxHighlighter.parseTimeout = saved }
         SyntaxHighlighter.parseTimeout = 0.000_001
         XCTAssertNil(highlighter.runs(for: code, language: python), "gave up")
-        SyntaxHighlighter.parseTimeout = saved
+        SyntaxHighlighter.parseTimeout = 10 // Plenty, even for a debug build on a slow machine.
         XCTAssertNil(highlighter.runs(for: code, language: python), "the same code isn't tried again")
         XCTAssertNotNil(highlighter.runs(for: code + "x = 1\n", language: python), "edited code is")
+    }
+
+    func testAParseThatTimedOutDoesNotSpoilTheNext() throws {
+        // tree-sitter keeps a timed-out parse to resume on the next call, whatever text that call has.
+        let python = try XCTUnwrap(CodeLanguages.language(info: "python"))
+        let saved = SyntaxHighlighter.parseTimeout
+        defer { SyntaxHighlighter.parseTimeout = saved }
+        SyntaxHighlighter.parseTimeout = 0.000_001
+        XCTAssertNil(highlighter.runs(for: String(repeating: "if y:\n    pass\n", count: 3_000), language: python))
+        SyntaxHighlighter.parseTimeout = 10
+        XCTAssertEqual(role(of: "None", in: "return None\n", language: "python"), .atom)
     }
 
     func testParsingHasATimeout() {

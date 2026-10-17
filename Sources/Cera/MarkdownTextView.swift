@@ -97,6 +97,10 @@ final class MarkdownTextView: NSTextView {
         // Let the document color run up under the title bar.
         window?.titlebarAppearsTransparent = true
         window?.backgroundColor = theme.background
+        // A new window starts with the cursor in the text, ready to type.
+        if let window, window.firstResponder === window {
+            window.makeFirstResponder(self)
+        }
     }
 
     /// Called when the text column's width changes, so images and tables can be resized.

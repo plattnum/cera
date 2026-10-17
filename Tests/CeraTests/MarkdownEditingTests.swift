@@ -126,4 +126,31 @@ final class MarkdownEditingTests: XCTestCase {
         undoManager.undo()
         XCTAssertEqual(textView.string, "hello")
     }
+
+    // MARK: - Focus
+
+    func testNewWindowPutsTheCursorInTheText() {
+        let (scrollView, textView) = MarkdownEditor.makeScrollView()
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        window.contentView = scrollView
+        XCTAssertIdentical(window.firstResponder, textView)
+    }
+
+    func testEditorDoesNotTakeFocusFromAnotherView() {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 100, height: 20))
+        let container = NSView(frame: window.contentLayoutRect)
+        container.addSubview(field)
+        window.contentView = container
+        window.makeFirstResponder(field)
+        let focused = window.firstResponder
+        container.addSubview(MarkdownEditor.makeScrollView().0)
+        XCTAssertIdentical(window.firstResponder, focused)
+    }
 }

@@ -105,7 +105,9 @@ final class LiveStylerTests: XCTestCase {
         guard let seeds = env["CERA_STRESS_SEEDS"].flatMap(UInt64.init) else { throw XCTSkip("Set CERA_STRESS_SEEDS.") }
         let document = try env["CERA_STRESS_FILE"].map { try String(contentsOfFile: $0, encoding: .utf8) } ?? Self.document
         for seed in 1...seeds {
-            runRandomEdits(seed: seed, document: document)
+            // The app's run loop empties the autorelease pool after every event; without that, a long
+            // run here keeps every styled copy alive and runs out of memory.
+            autoreleasepool { runRandomEdits(seed: seed, document: document) }
             if testRun?.failureCount ?? 0 > 0 { return }
         }
     }
@@ -120,7 +122,7 @@ final class LiveStylerTests: XCTestCase {
         let insertions = ["x", "\n", "\n\n", "**", "*", "`", "# ", "- ", "1. ", "> ", "| c |", "---", "[", "](u)", "~~", "    ", "```"]
         var generator = SeededGenerator(seed: seed)
         var previousCaret = 0
-        for step in 0..<300 {
+        for step in 0..<300 { let stop: Bool = autoreleasepool {
             let length = storage.length
             let location = length == 0 ? 0 : Int.random(in: 0...length, using: &generator)
             let edit: (range: NSRange, replacement: String)
@@ -130,7 +132,9 @@ final class LiveStylerTests: XCTestCase {
             } else {
                 edit = (NSRange(location: location, length: 0), insertions.randomElement(using: &generator)!)
             }
-            let oldText = storage.string
+            // A copy: `storage.string` is the storage's live text, so bridged back to NSString after
+            // the edit it would already hold the edit.
+            let oldText = NSString(string: storage.string) as String
             storage.replaceCharacters(in: edit.range, with: edit.replacement)
             let newLength = (edit.replacement as NSString).length
             let caret = edit.range.location + newLength
@@ -148,8 +152,8 @@ final class LiveStylerTests: XCTestCase {
                     .write(toFile: dump + "/edit.txt", atomically: true, encoding: .utf8)
             }
             assertSameStyling(storage, expected, "seed \(seed) step \(step)")
-            if testRun?.failureCount ?? 0 > 0 { return }
-        }
+            return testRun?.failureCount ?? 0 > 0
+        }; if stop { return } }
     }
 
     func testEditsDuringBackgroundStylingEndInFullStyling() {

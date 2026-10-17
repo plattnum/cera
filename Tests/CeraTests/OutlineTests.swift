@@ -162,6 +162,16 @@ final class OutlineNavigationTests: XCTestCase {
         XCTAssertEqual(textView.selectedRange().location, location(of: "Section 1"))
     }
 
+    func testJumpNoticesAnEditMadeAfterTheHeadingsWereFound() {
+        // The editor hands the outline `textView.string`, which stays tied to the live text when read
+        // back as an NSString. An edit after that must still count as a change.
+        model.update(text: textView.string, immediately: true)
+        textView.textStorage!.replaceCharacters(in: NSRange(location: 0, length: 0), with: "## New first\n\nIntro.\n\n")
+        model.jump(to: 1)
+        XCTAssertEqual(model.items.count, 31)
+        XCTAssertEqual(textView.selectedRange().location, location(of: "Section 1"))
+    }
+
     func testOutOfRangeJumpDoesNothing() {
         let before = textView.selectedRange()
         model.jump(to: 99)

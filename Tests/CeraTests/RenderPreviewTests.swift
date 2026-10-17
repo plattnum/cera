@@ -6,9 +6,9 @@ import XCTest
 /// Renders the app window to PNGs so the styling can be checked by eye.
 ///
 ///     CERA_RENDER_DIR=/some/dir [CERA_RENDER_FILE=doc.md] [CERA_RENDER_HEIGHT=5000] [CERA_RENDER_THEMES=midnight,plain]
-///         [CERA_RENDER_OUTLINE=1] swift test --filter RenderPreviewTests
+///         [CERA_RENDER_OUTLINE=1] [CERA_RENDER_COPY=1] swift test --filter RenderPreviewTests
 ///
-/// Writes one `window-<theme>.png` per theme.
+/// Writes one `window-<theme>.png` per theme. `CERA_RENDER_COPY=1` shows the copy button on the first code block.
 final class RenderPreviewTests: XCTestCase {
 
     private static let sample = """
@@ -109,11 +109,28 @@ final class RenderPreviewTests: XCTestCase {
         window.layoutIfNeeded()
         // Let SwiftUI and the text system finish their passes.
         RunLoop.main.run(until: Date().addingTimeInterval(0.4))
+        if ProcessInfo.processInfo.environment["CERA_RENDER_COPY"] == "1" {
+            showCopyButton(in: try XCTUnwrap(window.contentView))
+        }
 
         let frameView = try XCTUnwrap(window.contentView?.superview)
         let bitmap = try XCTUnwrap(frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds))
         frameView.cacheDisplay(in: frameView.bounds, to: bitmap)
         try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output)
         window.close()
+    }
+
+    /// Shows the copy button as if the pointer were over the first code block.
+    private func showCopyButton(in view: NSView) {
+        guard let textView = view as? MarkdownTextView else {
+            view.subviews.forEach(showCopyButton)
+            return
+        }
+        guard let layoutManager = textView.layoutManager as? MarkdownLayoutManager,
+              let start = (0..<(textView.string as NSString).length).first(where: { layoutManager.codePanel(at: $0) != nil }),
+              let panel = layoutManager.codePanel(at: start)
+        else { return }
+        let point = NSPoint(x: panel.rect.midX + textView.textContainerOrigin.x, y: panel.rect.midY + textView.textContainerOrigin.y)
+        textView.updateCodeCopyButton(at: point)
     }
 }

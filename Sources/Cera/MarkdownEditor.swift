@@ -96,13 +96,17 @@ struct MarkdownEditor: NSViewRepresentable {
             if let scrollObserver { NotificationCenter.default.removeObserver(scrollObserver) }
         }
 
-        /// Tells the outline when the text in view changes: on scrolling and resizing.
+        /// Tells the outline when the text in view changes: on scrolling and resizing. The
+        /// copy button follows too, since scrolling moves a different block under the pointer.
         func observeScrolling(of scrollView: NSScrollView) {
             let clipView = scrollView.contentView
             clipView.postsBoundsChangedNotifications = true
             scrollObserver = NotificationCenter.default.addObserver(
                 forName: NSView.boundsDidChangeNotification, object: clipView, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.parent.outline?.visibleAreaChanged() }
+                MainActor.assumeIsolated {
+                    self?.parent.outline?.visibleAreaChanged()
+                    self?.textView?.updateCodeCopyButton()
+                }
             }
         }
 

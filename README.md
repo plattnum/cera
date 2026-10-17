@@ -132,6 +132,7 @@ xattr -dr com.apple.quarantine Cera.app
 - Size an image with Obsidian's pipe syntax: `![photo|300](photo.png)` shows it 300 points wide, keeping its shape, and `![photo|300x200](photo.png)` fits it inside that box. A size can enlarge a small image but never goes past the column width. Right-click an image's line for Image Size ▸ Small (300), Medium (500), Large (700), or Original Size, which writes the size into the Markdown for you.
 - Add images by dragging files onto the page, pasting (⌘V, including screenshots), or Format ▸ Image… (⌃⌘I). An image already in the document's folder is linked by relative path; one from anywhere else is copied into an `assets/` folder next to the document. Untitled documents link files by absolute path, and pasted screenshots need the document saved first.
 - Links open with ⌘-click (or right-click ▸ Open Link). A plain click edits the link text.
+- Hover over a code block and a copy button appears in its corner; click it to copy just the code, without the fences (or the quote and list markers of a nested block). Right-click a code block for Copy Code.
 - View ▸ Show Outline (⌃⌘S) opens a sidebar listing the document's headings. Click one to jump to it; the section you're reading stays highlighted as you scroll, and the list updates as you type or when the file changes on disk. New windows open with the outline shown or hidden as you last left it.
 - Follows changes made to the open file on disk, such as an agent editing it: the window shows the new text within a moment, keeping the caret and the text in view in place. If the window has unsaved edits, a banner asks first: Keep Mine saves your version over the file, Load from Disk discards your edits. Saving over a changed file still brings up the system's "changed by another application" alert.
 - Return continues lists and quotes; Return on an empty item ends the list.
@@ -162,6 +163,7 @@ xattr -dr com.apple.quarantine Cera.app
 - `Sources/Cera/MarkdownLayoutManager.swift`: draws bullets, checkboxes, code panels, quote bars, and rules
 - `Sources/Cera/Theme.swift`: fonts, colors, and layout for each theme
 - `Sources/Cera/CodeHighlighter.swift`: syntax colors inside fenced code blocks
+- `Sources/Cera/CodeCopy.swift`: the copy button on code blocks, and reading a block's code without its fences
 - `Sources/Cera/FontRegistry.swift`: loads the bundled theme fonts
 - `Sources/Cera/Resources/Fonts/`: PT Serif, Merriweather, Lato, Vollkorn, Open Sans (SIL Open Font License) and TeX Gyre Adventor (GUST Font License), with their license files
 - `Tests/CeraTests/`: tests that run against a real text view

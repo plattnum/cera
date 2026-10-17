@@ -71,6 +71,8 @@ final class MarkdownTextView: NSTextView {
     override func didChangeText() {
         super.didChangeText()
         if selectedRange().length == 0 { formatBar?.isHidden = true }
+        // Typing can move or reshape the block; the button comes back when the pointer moves.
+        hideCodeCopyButton()
     }
 
     // MARK: - Theme
@@ -108,6 +110,12 @@ final class MarkdownTextView: NSTextView {
 
     /// The reading position waiting to be put back after a change, by `keepReadingPosition`.
     var heldReadingPosition: ReadingPosition?
+
+    /// The button shown in the corner of the code block under the pointer (see CodeCopy.swift).
+    var codeCopyButton: CodeCopyButton?
+    /// Where Copy Code puts the code. Tests use their own, to leave the clipboard alone.
+    var codeCopyPasteboard: NSPasteboard = .general
+    private var hoverArea: NSTrackingArea?
 
     /// The document's top-level block ranges, kept current by the editor's styler.
     /// Formatting commands parse whole blocks, so Markdown is read in its real context.
@@ -238,12 +246,27 @@ final class MarkdownTextView: NSTextView {
         super.mouseDown(with: event)
     }
 
-    /// Shows the pointing hand while ⌘ is held over a link.
+    /// Shows the pointing hand while ⌘ is held over a link, and the copy button over a code block.
     override func mouseMoved(with event: NSEvent) {
         super.mouseMoved(with: event)
         if event.modifierFlags.contains(.command), linkURL(at: event) != nil {
             NSCursor.pointingHand.set()
         }
+        updateCodeCopyButton(at: convert(event.locationInWindow, from: nil))
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        hideCodeCopyButton()
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hoverArea { removeTrackingArea(hoverArea) }
+        let area = NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect],
+                                  owner: self, userInfo: nil)
+        addTrackingArea(area)
+        hoverArea = area
     }
 
     override func menu(for event: NSEvent) -> NSMenu? {
@@ -262,6 +285,12 @@ final class MarkdownTextView: NSTextView {
         } else if let sizes = imageSizeMenu(at: convert(event.locationInWindow, from: nil)) {
             let item = NSMenuItem(title: "Image Size", action: nil, keyEquivalent: "")
             item.submenu = sizes
+            menu.insertItem(item, at: 0)
+            menu.insertItem(.separator(), at: 1)
+        } else if let location = codeBlockLocation(at: convert(event.locationInWindow, from: nil)) {
+            let item = NSMenuItem(title: "Copy Code", action: #selector(copyCodeBlock(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = location
             menu.insertItem(item, at: 0)
             menu.insertItem(.separator(), at: 1)
         }

@@ -151,6 +151,24 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
         return count
     }
 
+    /// The panel drawn behind the code block holding `characterIndex`, in text container
+    /// coordinates, and the block's characters (whole lines, fences included).
+    func codePanel(at characterIndex: Int) -> (rect: NSRect, block: NSRange)? {
+        guard let storage = textStorage, let container = textContainers.first,
+              characterIndex >= 0, characterIndex < storage.length
+        else { return nil }
+        var block = NSRange()
+        guard let panelX = (storage.attribute(.codeBlock, at: characterIndex, longestEffectiveRange: &block,
+                                              in: NSRange(location: 0, length: storage.length)) as? NSNumber)
+                .map({ CGFloat($0.doubleValue) })
+        else { return nil }
+        var panel = unionOfLines(for: block)
+        guard !panel.isNull else { return nil }
+        panel.origin.x = container.lineFragmentPadding + panelX
+        panel.size.width = container.size.width - 2 * container.lineFragmentPadding - panelX
+        return (panel, block)
+    }
+
     override func drawBackground(forGlyphRange glyphsToShow: NSRange, at origin: NSPoint) {
         super.drawBackground(forGlyphRange: glyphsToShow, at: origin)
         guard let storage = textStorage, let container = textContainers.first else { return }
@@ -161,15 +179,8 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
 
         // Code panels span the whole block, not just the visible part, so their shape is stable while scrolling.
         storage.enumerateAttribute(.codeBlock, in: characters) { value, range, _ in
-            guard let panelX = (value as? NSNumber).map({ CGFloat($0.doubleValue) }) else { return }
-            var block = range
-            _ = storage.attribute(.codeBlock, at: range.location, longestEffectiveRange: &block,
-                                  in: NSRange(location: 0, length: storage.length))
-            var panel = unionOfLines(for: block)
-            guard !panel.isNull else { return }
-            panel.origin.x = columnX + panelX
-            panel.size.width = columnWidth - panelX
-            let shape = NSBezierPath(roundedRect: panel.offsetBy(dx: 0, dy: origin.y).insetBy(dx: 0.5, dy: 0.5),
+            guard value != nil, let panel = codePanel(at: range.location)?.rect else { return }
+            let shape = NSBezierPath(roundedRect: panel.offsetBy(dx: origin.x, dy: origin.y).insetBy(dx: 0.5, dy: 0.5),
                                      xRadius: theme.codeRadius, yRadius: theme.codeRadius)
             theme.codePanel.setFill()
             shape.fill()

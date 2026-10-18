@@ -5,3 +5,6 @@ build/
 xcuserdata/
 .DS_Store
 TestDocuments/large-*.md
+
+# Local symlink to private project docs
+/vault

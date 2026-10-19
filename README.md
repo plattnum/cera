@@ -108,7 +108,9 @@ Every push to `main` runs `.github/workflows/build.yml` on a GitHub-hosted Mac: 
 tests, builds the app, and attaches `Cera.zip` to the run (Actions tab ▸ the run ▸
 Artifacts).
 
-To publish a release, set the version in `Resources/Info.plist`, then tag it and push the tag:
+To publish a release, set the version in `Resources/Info.plist`, add a `## <version>` section to
+`CHANGELOG.md` saying what's new, and update the "What's new" section of the website
+(`docs/index.html`). Then tag it and push the tag:
 
 ```sh
 git tag v0.3.0
@@ -116,9 +118,10 @@ git push origin v0.3.0
 ```
 
 The workflow then signs Cera with the Developer ID, has Apple notarize it, creates a GitHub
-Release with `Cera.zip` attached, and points the
+Release with `Cera.zip` attached and the version's changelog section as its notes
+(`scripts/release-notes.sh` prints them), and points the
 [Homebrew cask](https://github.com/plattnum/homebrew-cera) at it. It stops if the tag
-doesn't match the version in `Info.plist`. It uses these repository secrets:
+doesn't match the version in `Info.plist`, or `CHANGELOG.md` has no section for it. It uses these repository secrets:
 
 - `DEVELOPER_ID_P12`: the Developer ID Application certificate and key, exported from
   Keychain Access as a `.p12` and base64-encoded

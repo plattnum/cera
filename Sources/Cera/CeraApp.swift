@@ -30,6 +30,7 @@ struct CeraCommands: Commands {
     @AppStorage("checksSpelling") private var checksSpelling = false
     @AppStorage("joinsHardWrappedLines") private var joinsHardWrappedLines = false
     @FocusedBinding(\.showsOutline) private var showsOutline
+    @FocusedBinding(\.showsSource) private var showsSource
 
     var body: some Commands {
         CommandGroup(after: .newItem) {
@@ -48,6 +49,9 @@ struct CeraCommands: Commands {
         }
 
         CommandGroup(after: .toolbar) {
+            Button(showsSource == true ? "Show Rendered Markdown" : "Show Markdown Source") { showsSource?.toggle() }
+                .keyboardShortcut("/")
+                .disabled(showsSource == nil)
             Toggle("Flow Hard-Wrapped Paragraphs", isOn: $joinsHardWrappedLines)
         }
 

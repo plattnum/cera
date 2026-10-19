@@ -6,9 +6,11 @@ import XCTest
 /// Renders the app window to PNGs so the styling can be checked by eye.
 ///
 ///     CERA_RENDER_DIR=/some/dir [CERA_RENDER_FILE=doc.md] [CERA_RENDER_HEIGHT=5000] [CERA_RENDER_THEMES=midnight,plain]
-///         [CERA_RENDER_OUTLINE=1] [CERA_RENDER_COPY=1] [CERA_RENDER_TABLE_OFFSET=300] swift test --filter RenderPreviewTests
+///         [CERA_RENDER_OUTLINE=1] [CERA_RENDER_COPY=1] [CERA_RENDER_TABLE_OFFSET=300]
+///         [CERA_RENDER_SOURCE=1] swift test --filter RenderPreviewTests
 ///
 /// Writes one `window-<theme>.png` per theme. `CERA_RENDER_COPY=1` shows the copy button on the first code block.
+/// `CERA_RENDER_SOURCE=1` shows the Markdown source instead of rendering it.
 /// `CERA_RENDER_TABLE_OFFSET` scrolls each table too wide for the column that many points to the right. Scroll
 /// bars don't show in the pictures: `cacheDisplay` doesn't draw them.
 final class RenderPreviewTests: XCTestCase {
@@ -88,11 +90,14 @@ final class RenderPreviewTests: XCTestCase {
 
         let previous = UserDefaults.standard.string(forKey: "theme")
         let previousOutline = UserDefaults.standard.object(forKey: "showsOutline")
+        let previousSource = UserDefaults.standard.object(forKey: "showsSource")
         defer {
             UserDefaults.standard.set(previous, forKey: "theme")
             UserDefaults.standard.set(previousOutline, forKey: "showsOutline")
+            UserDefaults.standard.set(previousSource, forKey: "showsSource")
         }
         UserDefaults.standard.set(env["CERA_RENDER_OUTLINE"] == "1", forKey: "showsOutline")
+        UserDefaults.standard.set(env["CERA_RENDER_SOURCE"] == "1", forKey: "showsSource")
 
         let height = env["CERA_RENDER_HEIGHT"].flatMap(Double.init) ?? 1300
         let themes = env["CERA_RENDER_THEMES"].map { $0.split(separator: ",").compactMap { ThemeChoice(rawValue: String($0)) } }

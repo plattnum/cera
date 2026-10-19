@@ -9,6 +9,8 @@ struct MarkdownEditor: NSViewRepresentable {
     var baseURL: URL?
     var checksSpelling = false
     var joinsHardWrappedLines = false
+    /// Show the Markdown source instead of rendering it.
+    var showsSource = false
     /// The document's undo manager. Edits registered on it mark the document as edited.
     var undoManager: UndoManager?
     /// The outline sidebar's model, told when the editor scrolls.
@@ -62,7 +64,8 @@ struct MarkdownEditor: NSViewRepresentable {
             textView.replaceTextKeepingPosition(with: text) { context.coordinator.styleChangedText() }
         }
         if textView.theme.name != theme.name || context.coordinator.baseURL != baseURL
-            || context.coordinator.joinsHardWrappedLines != joinsHardWrappedLines {
+            || context.coordinator.joinsHardWrappedLines != joinsHardWrappedLines
+            || context.coordinator.showsSource != showsSource {
             context.coordinator.restyle()
         }
     }
@@ -76,9 +79,10 @@ struct MarkdownEditor: NSViewRepresentable {
         private var pendingEdit: (range: NSRange, delta: Int)?
         private var scheduledRestyle: DispatchWorkItem?
 
-        /// The base URL and reflow setting the text was last styled with.
+        /// The base URL, reflow setting, and view the text was last styled with.
         private(set) var baseURL: URL?
         private(set) var joinsHardWrappedLines = false
+        private(set) var showsSource = false
         private var imageObserver: NSObjectProtocol?
         private var scrollObserver: NSObjectProtocol?
 
@@ -164,7 +168,7 @@ struct MarkdownEditor: NSViewRepresentable {
 
         // MARK: Full restyle
 
-        /// Restyles the whole document: on open, and when the theme, folder, or width changes.
+        /// Restyles the whole document: on open, and when the theme, folder, width, or view changes.
         func restyle() {
             scheduledRestyle?.cancel()
             guard let textView, let storage = textView.textStorage else { return }
@@ -173,6 +177,8 @@ struct MarkdownEditor: NSViewRepresentable {
             textView.apply(parent.theme)
             baseURL = parent.baseURL
             joinsHardWrappedLines = parent.joinsHardWrappedLines
+            showsSource = parent.showsSource
+            if showsSource { textView.typingAttributes = SourceStyler.attributes(parent.theme) }
             pendingEdit = nil
             let caret = textView.selectedRange().location
             activeLineStart = lineStart(at: caret)
@@ -180,7 +186,7 @@ struct MarkdownEditor: NSViewRepresentable {
             let padding = textView.textContainer?.lineFragmentPadding ?? 0
             let width = (textView.textContainer?.size.width ?? 760) - 2 * padding
             let settings = LiveStyler.Settings(theme: parent.theme, baseURL: baseURL, availableWidth: max(200, width),
-                                               joinsHardWrappedLines: joinsHardWrappedLines)
+                                               joinsHardWrappedLines: joinsHardWrappedLines, showsSource: showsSource)
             let styler = liveStyler ?? LiveStyler(storage: storage, settings: settings)
             liveStyler = styler
             textView.topLevelBlocks = { [weak styler] in styler?.blocks ?? [] }

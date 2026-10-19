@@ -14,6 +14,9 @@ struct ContentView: View {
     @StateObject private var outline = OutlineModel()
     /// Whether this window shows the outline; new windows start as the last one was left.
     @State private var showsOutline = UserDefaults.standard.bool(forKey: "showsOutline")
+    /// Whether this window shows the Markdown source instead of rendering it; new windows
+    /// start as the last one was left.
+    @State private var showsSource = UserDefaults.standard.bool(forKey: "showsSource")
 
     var body: some View {
         let theme = themeChoice.theme
@@ -23,7 +26,8 @@ struct ContentView: View {
             }
             MarkdownEditor(text: $document.text, theme: theme,
                            baseURL: fileURL?.deletingLastPathComponent(), checksSpelling: checksSpelling,
-                           joinsHardWrappedLines: joinsHardWrappedLines, undoManager: undoManager, outline: outline)
+                           joinsHardWrappedLines: joinsHardWrappedLines, showsSource: showsSource,
+                           undoManager: undoManager, outline: outline)
                 .frame(minWidth: showsOutline ? 360 : 520, minHeight: 360)
                 .ignoresSafeArea(.container, edges: .top)
                 .overlay(alignment: .top) {
@@ -46,7 +50,11 @@ struct ContentView: View {
             UserDefaults.standard.set(showsOutline, forKey: "showsOutline")
             if showsOutline { outline.update(text: document.text, immediately: true) }
         }
+        .onChange(of: showsSource) {
+            UserDefaults.standard.set(showsSource, forKey: "showsSource")
+        }
         .focusedSceneValue(\.showsOutline, $showsOutline)
+        .focusedSceneValue(\.showsSource, $showsSource)
     }
 }
 
@@ -58,6 +66,16 @@ extension FocusedValues {
     }
 
     private struct ShowsOutlineKey: FocusedValueKey {
+        typealias Value = Binding<Bool>
+    }
+
+    /// Whether the focused window shows the Markdown source, for the View menu.
+    var showsSource: Binding<Bool>? {
+        get { self[ShowsSourceKey.self] }
+        set { self[ShowsSourceKey.self] = newValue }
+    }
+
+    private struct ShowsSourceKey: FocusedValueKey {
         typealias Value = Binding<Bool>
     }
 }

@@ -14,6 +14,8 @@ final class LiveStyler {
         var baseURL: URL?
         var availableWidth: CGFloat
         var joinsHardWrappedLines = false
+        /// Style the text as Markdown source (see `SourceStyler`) instead of rendering it.
+        var showsSource = false
     }
 
     private let storage: NSTextStorage
@@ -191,6 +193,8 @@ final class LiveStyler {
     /// Restyles the blocks holding the old and new cursor lines, so their markers show or hide.
     func caretMoved(fromLineAt oldLocation: Int, toLineAt newLocation: Int, caret: Int) {
         self.caret = caret
+        // Source shows every marker on every line; nothing changes with the cursor.
+        guard !settings.showsSource else { return }
         let text = NSString(string: storage.string)
         var regions: [NSRange] = []
         for location in [oldLocation, newLocation] {
@@ -244,6 +248,10 @@ final class LiveStyler {
 
     private func style(_ region: NSRange, text: NSString, caret: Int) {
         guard region.length > 0, NSMaxRange(region) <= text.length else { return }
+        if settings.showsSource {
+            SourceStyler.styleRegion(storage, text: text, region: region, theme: settings.theme)
+            return
+        }
         MarkdownStyler(theme: settings.theme, joinsHardWrappedLines: settings.joinsHardWrappedLines).styleRegion(
             storage, text: text, region: region, caret: caret, baseURL: settings.baseURL,
             availableWidth: settings.availableWidth, definitions: definitions)

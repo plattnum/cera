@@ -101,8 +101,9 @@ final class MarkdownStylerTests: XCTestCase {
     /// A table with `columns` columns of long cells, too wide for the default 760-point column from 4 up.
     private func wideTable(columns: Int) -> String {
         let cells = (0..<columns).map { "column number \($0) heading" }
-        return "| " + cells.joined(separator: " | ") + " |\n|" + String(repeating: "---|", count: columns)
-            + "\n| " + cells.joined(separator: " | ") + " |\n"
+        let row = cells.joined(separator: " | ")
+        let delimiter = String(repeating: "---|", count: columns)
+        return "| \(row) |\n|\(delimiter)\n| \(row) |\n"
     }
 
     private func tableBlock(in storage: NSTextStorage, at index: Int) -> (block: TableBlock, range: NSRange)? {

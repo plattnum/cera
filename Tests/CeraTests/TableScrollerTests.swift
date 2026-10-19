@@ -9,9 +9,13 @@ final class TableScrollerTests: XCTestCase {
     private var textView: MarkdownTextView!
 
     private static let cells = (0..<8).map { "column number \($0) heading" }
-    private static let wideTable = "| " + cells.joined(separator: " | ") + " |\n|" + String(repeating: "---|", count: 8)
-        + "\n| " + cells.map { $0.replacingOccurrences(of: "heading", with: "[value](https://example.com)") }
-            .joined(separator: " | ") + " |\n"
+    private static let linkCells = cells.map { $0.replacingOccurrences(of: "heading", with: "[value](https://example.com)") }
+    private static let wideTable: String = {
+        let header = cells.joined(separator: " | ")
+        let body = linkCells.joined(separator: " | ")
+        let delimiter = String(repeating: "---|", count: 8)
+        return "| \(header) |\n|\(delimiter)\n| \(body) |\n"
+    }()
     private static let document = "# Notes\n\nIntro text.\n\n" + wideTable + "\n| a | b |\n|---|---|\n| 1 | 2 |\n\nLast line.\n"
 
     override func setUp() async throws {

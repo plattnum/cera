@@ -44,6 +44,8 @@ final class MarkdownTextView: NSTextView {
         textView.isAutomaticTextCompletionEnabled = false
         textView.isContinuousSpellCheckingEnabled = false
         textView.isGrammarCheckingEnabled = false
+        // Layout moves tables, and restyling changes which ones are too wide.
+        layoutManager.onLayoutComplete = { [weak textView] in textView?.setNeedsUpdateTableScrollers() }
         return textView
     }
 
@@ -54,6 +56,8 @@ final class MarkdownTextView: NSTextView {
 
     override func setSelectedRanges(_ ranges: [NSValue], affinity: NSSelectionAffinity, stillSelecting: Bool) {
         super.setSelectedRanges(ranges, affinity: affinity, stillSelecting: stillSelecting)
+        // A table holding the selection shows as text, without its scroller.
+        setNeedsUpdateTableScrollers()
         guard !stillSelecting else {
             formatBar?.isHidden = true // Wait until the mouse is released.
             return
@@ -125,6 +129,14 @@ final class MarkdownTextView: NSTextView {
     var codeCopyPasteboard: NSPasteboard = .general
     private var hoverArea: NSTrackingArea?
 
+    /// The scrollers over tables too wide for the column (see TableScroller.swift), by the
+    /// table's first character.
+    var tableScrollers: [Int: TableScroller] = [:]
+    /// How far each table was scrolled when its scroller was removed, by the table's first character.
+    var tableOffsets: [Int: CGFloat] = [:]
+    /// Whether an update of the table scrollers is waiting for the next turn of the run loop.
+    var tableScrollersNeedUpdate = false
+
     /// The document's top-level block ranges, kept current by the editor's styler.
     /// Formatting commands parse whole blocks, so Markdown is read in its real context.
     var topLevelBlocks: () -> [NSRange] = { [] }
@@ -137,6 +149,7 @@ final class MarkdownTextView: NSTextView {
         super.setFrameSize(newSize)
         updateColumnInsets()
         if widthChanged {
+            setNeedsUpdateTableScrollers()
             onWidthChange?()
             if formatBar?.isHidden == false { updateFormatBar() }
         }

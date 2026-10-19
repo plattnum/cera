@@ -1138,6 +1138,9 @@ private final class StyleContext {
             if natural > 0, natural < available {
                 columnWidths = columnWidths.map { $0 + (available - natural) * $0 / natural }
             }
+            // A wider table keeps its natural width; the text view lets it scroll sideways.
+            let whole = NSUnionRange(text.lineRange(for: table.rows[0].line), text.lineRange(for: table.rows[table.rows.count - 1].line))
+            storage.addAttribute(.tableBlock, value: TableBlock(overflows: natural > available + 0.5), range: whole)
             var edges: [CGFloat] = [table.indent]
             for width in columnWidths { edges.append(edges.last! + width) }
 

@@ -142,6 +142,7 @@ xattr -dr com.apple.quarantine Cera.app
 ## Features
 
 - Live rendering, parsed with Apple's [swift-markdown](https://github.com/swiftlang/swift-markdown) (CommonMark plus GitHub tables, task lists, and strikethrough): headings (`#` and underlined), bold, italic, strikethrough, inline code, fenced and indented code blocks, links, autolinks, nested quotes, nested bullet and numbered lists, task checkboxes, horizontal rules, tables (with column alignment), and images.
+- A table too wide for the column scrolls sideways under its own scroll bar, so every column can be read. Scrolling up and down over it still scrolls the page; click a cell to edit its row.
 - Images on their own line are drawn in place, scaled to fit. Local paths are resolved relative to the document; web images load in the background.
 - Size an image with Obsidian's pipe syntax: `![photo|300](photo.png)` shows it 300 points wide, keeping its shape, and `![photo|300x200](photo.png)` fits it inside that box. A size can enlarge a small image but never goes past the column width. Right-click an image's line for Image Size ▸ Small (300), Medium (500), Large (700), or Original Size, which writes the size into the Markdown for you.
 - Add images by dragging files onto the page, pasting (⌘V, including screenshots), or Format ▸ Image… (⌃⌘I). An image already in the document's folder is linked by relative path; one from anywhere else is copied into an `assets/` folder next to the document. Untitled documents link files by absolute path, and pasted screenshots need the document saved first.

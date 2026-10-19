@@ -98,6 +98,56 @@ final class MarkdownStylerTests: XCTestCase {
         XCTAssertNotNil(storage.attribute(.tableRow, at: 2, effectiveRange: nil))
     }
 
+    /// A table with `columns` columns of long cells, too wide for the default 760-point column from 4 up.
+    private func wideTable(columns: Int) -> String {
+        let cells = (0..<columns).map { "column number \($0) heading" }
+        return "| " + cells.joined(separator: " | ") + " |\n|" + String(repeating: "---|", count: columns)
+            + "\n| " + cells.joined(separator: " | ") + " |\n"
+    }
+
+    private func tableBlock(in storage: NSTextStorage, at index: Int) -> (block: TableBlock, range: NSRange)? {
+        var range = NSRange()
+        guard let block = storage.attribute(.tableBlock, at: index, longestEffectiveRange: &range,
+                                            in: NSRange(location: 0, length: storage.length)) as? TableBlock
+        else { return nil }
+        return (block, range)
+    }
+
+    func testWideTableOverflowsAtItsNaturalWidth() throws {
+        let source = wideTable(columns: 8) + "\nlast"
+        let storage = style(source, caret: (source as NSString).length)
+        let table = try XCTUnwrap(tableBlock(in: storage, at: 2))
+        XCTAssertTrue(table.block.overflows)
+        let row = try XCTUnwrap(storage.attribute(.tableRow, at: 2, effectiveRange: nil) as? TableRowInfo)
+        XCTAssertGreaterThan(try XCTUnwrap(row.edges.last), 760, "the columns keep their natural width")
+    }
+
+    func testNarrowTableFillsTheColumnAndDoesNotOverflow() throws {
+        let source = "| a | b |\n|---|---|\n| 1 | 2 |\n\nlast"
+        let storage = style(source, caret: (source as NSString).length)
+        XCTAssertFalse(try XCTUnwrap(tableBlock(in: storage, at: 2)).block.overflows)
+        let row = try XCTUnwrap(storage.attribute(.tableRow, at: 2, effectiveRange: nil) as? TableRowInfo)
+        XCTAssertEqual(try XCTUnwrap(row.edges.last), 760, accuracy: 0.5)
+    }
+
+    func testTableBlockCoversExactlyTheTablesLines() throws {
+        let table = "| a | b |\n|---|---|\n| 1 | 2 |\n"
+        let source = "intro\n\n" + table + "\nlast"
+        let storage = style(source, caret: (source as NSString).length)
+        let range = try XCTUnwrap(tableBlock(in: storage, at: 9)).range
+        XCTAssertEqual(range, NSRange(location: 7, length: (table as NSString).length))
+    }
+
+    func testTwoTablesAreSeparateBlocks() throws {
+        let first = "| a | b |\n|---|---|\n| 1 | 2 |\n"
+        let source = first + "\n| c | d |\n|---|---|\n| 3 | 4 |\n\nlast"
+        let storage = style(source, caret: (source as NSString).length)
+        let one = try XCTUnwrap(tableBlock(in: storage, at: 2)).range
+        let two = try XCTUnwrap(tableBlock(in: storage, at: (first as NSString).length + 3)).range
+        XCTAssertEqual(NSMaxRange(one), (first as NSString).length)
+        XCTAssertGreaterThan(two.location, NSMaxRange(one))
+    }
+
     func testNestedListBulletsChangeShape() {
         let source = "- one\n  - two\n\nlast"
         let storage = style(source, caret: (source as NSString).length)

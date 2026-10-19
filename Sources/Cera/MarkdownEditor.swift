@@ -106,6 +106,8 @@ struct MarkdownEditor: NSViewRepresentable {
                 MainActor.assumeIsolated {
                     self?.parent.outline?.visibleAreaChanged()
                     self?.textView?.updateCodeCopyButton()
+                    // Right away, so a table scrolling into view never shows cut off for a moment.
+                    self?.textView?.updateTableScrollers()
                 }
             }
         }

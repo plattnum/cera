@@ -15,6 +15,8 @@ extension NSAttributedString.Key {
     static let imageBlock = NSAttributedString.Key("CeraImageBlock")
     /// Marks a table row. The value is a `TableRowInfo`.
     static let tableRow = NSAttributedString.Key("CeraTableRow")
+    /// Marks a whole table, header to last row. The value is a `TableBlock`.
+    static let tableBlock = NSAttributedString.Key("CeraTableBlock")
     /// Marks a horizontal rule line, drawn as a line across the column.
     static let horizontalRule = NSAttributedString.Key("CeraHorizontalRule")
     /// Marks a heading drawn with a rule underneath: "full" across the column or a "short" centered stroke.
@@ -76,6 +78,24 @@ final class TableRowInfo: NSObject {
     override var hash: Int { ObjectIdentifier(TableRowInfo.self).hashValue }
 }
 
+/// A table as a whole. Its characters are the attribute's effective range: tables are always
+/// separated by a line that isn't part of one, so two never run together.
+final class TableBlock: NSObject {
+    /// Whether the table is wider than the text column, so its right side is cut off.
+    let overflows: Bool
+
+    init(overflows: Bool) {
+        self.overflows = overflows
+    }
+
+    /// Equal when they draw the same thing, so restyling with an unchanged value is a no-op.
+    override func isEqual(_ object: Any?) -> Bool {
+        (object as? TableBlock)?.overflows == overflows
+    }
+
+    override var hash: Int { ObjectIdentifier(TableBlock.self).hashValue }
+}
+
 /// Draws what text attributes can't: list bullets and numbers in place of hidden
 /// markers, code block panels, quote bars, horizontal rules, heading rules, and
 /// uppercase headings.
@@ -84,6 +104,8 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
     /// The first character of the code block showing the copy button, whose corner the button
     /// takes over from the language label.
     var codeBlockWithCopyButton: Int?
+    /// Called when a pass of layout finishes.
+    var onLayoutComplete: (() -> Void)?
 
     override init() {
         super.init()
@@ -93,6 +115,10 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         delegate = self
+    }
+
+    func layoutManager(_ layoutManager: NSLayoutManager, didCompleteLayoutFor textContainer: NSTextContainer?, atEnd layoutFinishedFlag: Bool) {
+        onLayoutComplete?()
     }
 
     /// Lays out soft line breaks (see `.softBreak`) as a space, so a hard-wrapped paragraph

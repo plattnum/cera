@@ -6,9 +6,11 @@ import XCTest
 /// Renders the app window to PNGs so the styling can be checked by eye.
 ///
 ///     CERA_RENDER_DIR=/some/dir [CERA_RENDER_FILE=doc.md] [CERA_RENDER_HEIGHT=5000] [CERA_RENDER_THEMES=midnight,plain]
-///         [CERA_RENDER_OUTLINE=1] [CERA_RENDER_COPY=1] swift test --filter RenderPreviewTests
+///         [CERA_RENDER_OUTLINE=1] [CERA_RENDER_COPY=1] [CERA_RENDER_TABLE_OFFSET=300] swift test --filter RenderPreviewTests
 ///
 /// Writes one `window-<theme>.png` per theme. `CERA_RENDER_COPY=1` shows the copy button on the first code block.
+/// `CERA_RENDER_TABLE_OFFSET` scrolls each table too wide for the column that many points to the right. Scroll
+/// bars don't show in the pictures: `cacheDisplay` doesn't draw them.
 final class RenderPreviewTests: XCTestCase {
 
     private static let sample = """
@@ -22,6 +24,11 @@ final class RenderPreviewTests: XCTestCase {
     | Tables | **done** | right-aligned |
     | Images | done | `local` files |
     | Lists | done | nested too |
+
+    | Theme | Body font | Code font | Column | Wide column | Headings | Code panel | Notes |
+    |-------|-----------|-----------|--------|-------------|----------|------------|-------|
+    | Midnight | Lucida Grande | Menlo | 914 | 1024 | bright | dark | the default, scrolls sideways |
+    | Plain | Open Sans | Courier | 860 | 860 | ruled | light grey | like GitHub |
 
     ![diagram](sample-image.png)
 
@@ -127,12 +134,28 @@ final class RenderPreviewTests: XCTestCase {
         if ProcessInfo.processInfo.environment["CERA_RENDER_COPY"] == "1" {
             showCopyButton(in: try XCTUnwrap(window.contentView))
         }
+        if let offset = ProcessInfo.processInfo.environment["CERA_RENDER_TABLE_OFFSET"].flatMap(Double.init) {
+            scrollTables(in: try XCTUnwrap(window.contentView), by: offset)
+            RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+        }
 
         let frameView = try XCTUnwrap(window.contentView?.superview)
         let bitmap = try XCTUnwrap(frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds))
         frameView.cacheDisplay(in: frameView.bounds, to: bitmap)
         try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output)
         window.close()
+    }
+
+    /// Scrolls every table scroller under `view`.
+    private func scrollTables(in view: NSView, by offset: Double) {
+        guard let textView = view as? MarkdownTextView else {
+            view.subviews.forEach { scrollTables(in: $0, by: offset) }
+            return
+        }
+        textView.updateTableScrollers()
+        for scroller in textView.tableScrollers.values {
+            scroller.offset = offset
+        }
     }
 
     /// Shows the copy button as if the pointer were over the first code block.

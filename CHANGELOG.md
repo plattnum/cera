@@ -2,6 +2,14 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.2 (2026-10-21)
+
+- **Links to headings work.** ⌘-click a `#section` link, such as an entry in a README's table of contents, and
+  Cera jumps to that heading. Headings get the same anchors as on GitHub (`## Getting Started!` is
+  `#getting-started`), and `#top` goes to the start of the document.
+- **Linked Markdown files open in Cera.** ⌘-click a link to another `.md` file and it opens in Cera, not in
+  whatever app macOS uses for Markdown; `guide.md#setup` opens it at that heading.
+
 ## 0.6.1 (2026-10-19)
 
 - **Wide tables scroll sideways.** A table too wide for the column used to be cut off at the right edge. Now it

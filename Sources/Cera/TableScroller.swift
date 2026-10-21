@@ -274,7 +274,7 @@ extension MarkdownTextView {
     func clickTable(at index: Int, with event: NSEvent) {
         if event.modifierFlags.contains(.command), let storage = textStorage, index < storage.length,
            let url = storage.attribute(.linkTarget, at: index, effectiveRange: nil) as? URL {
-            NSWorkspace.shared.open(url)
+            followLink(url)
             return
         }
         placeCaretInTable(at: index)

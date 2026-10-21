@@ -10,7 +10,6 @@ final class LinkTests: XCTestCase {
         XCTAssertEqual(LinkResolver.resolve("mailto:me@example.com", relativeTo: base)?.scheme, "mailto")
         XCTAssertEqual(LinkResolver.resolve("www.example.com", relativeTo: base)?.absoluteString, "https://www.example.com")
         XCTAssertEqual(LinkResolver.resolve("guide/setup.md#install", relativeTo: base)?.path, "/Users/me/docs/guide/setup.md")
-        XCTAssertNil(LinkResolver.resolve("#section", relativeTo: base))
     }
 
     func testStylerAttachesTargetsToEveryLinkForm() {

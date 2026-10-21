@@ -150,7 +150,7 @@ xattr -dr com.apple.quarantine Cera.app
 - Images on their own line are drawn in place, scaled to fit. Local paths are resolved relative to the document; web images load in the background.
 - Size an image with Obsidian's pipe syntax: `![photo|300](photo.png)` shows it 300 points wide, keeping its shape, and `![photo|300x200](photo.png)` fits it inside that box. A size can enlarge a small image but never goes past the column width. Right-click an image's line for Image Size ▸ Small (300), Medium (500), Large (700), or Original Size, which writes the size into the Markdown for you.
 - Add images by dragging files onto the page, pasting (⌘V, including screenshots), or Format ▸ Image… (⌃⌘I). An image already in the document's folder is linked by relative path; one from anywhere else is copied into an `assets/` folder next to the document. Untitled documents link files by absolute path, and pasted screenshots need the document saved first.
-- Links open with ⌘-click (or right-click ▸ Open Link). A plain click edits the link text.
+- Links open with ⌘-click (or right-click ▸ Open Link). A plain click edits the link text. A `#section` link jumps to that heading, using GitHub's anchors (`## Getting Started!` is `#getting-started`; a repeated heading gets `-1`, `-2`), and `#top` goes to the start. A link to another Markdown file opens it in Cera, at its heading for `guide.md#setup`.
 - Mermaid diagrams: a ```` ```mermaid ```` code block shows as the diagram, drawn natively by [MermaidKit](https://github.com/2389-research/MermaidKit) (no web view or JavaScript) in the theme's colors, with labels the size of the body text, and scaled down when too wide for the column. Put the cursor in the block to edit its code; move away and the diagram comes back. A block MermaidKit can't draw, such as one with a syntax error, stays a code block. Flowcharts, sequence, class, state, ER, Gantt, pie, mindmap, journey, and more are supported; Mermaid's `classDef` and `style` colors are ignored.
 - Hover over a code block and a copy button appears in its corner; click it to copy just the code, without the fences (or the quote and list markers of a nested block). Right-click a code block for Copy Code.
 - View ▸ Show Outline (⌃⌘S) opens a sidebar listing the document's headings. Click one to jump to it; the section you're reading stays highlighted as you scroll, and the list updates as you type or when the file changes on disk. New windows open with the outline shown or hidden as you last left it.
@@ -183,7 +183,8 @@ xattr -dr com.apple.quarantine Cera.app
 - `Sources/Cera/ImageSize.swift`: reads and rewrites an image's `|size`
 - `Sources/Cera/DiskSync.swift`: watches the open file and reloads it when it changes on disk
 - `Sources/Cera/Outline.swift`: the outline sidebar, and keeping the reading position when the text is laid out again
-- `Sources/Cera/LinkResolver.swift`: turns link destinations into openable URLs
+- `Sources/Cera/LinkResolver.swift`: turns link destinations into openable URLs, and follows them
+- `Sources/Cera/HeadingAnchors.swift`: the `#anchor` each heading answers to
 - `Sources/Cera/MarkdownLayoutManager.swift`: draws bullets, checkboxes, code panels, quote bars, and rules
 - `Sources/Cera/Theme.swift`: fonts, colors, and layout for each theme
 - `Sources/Cera/SyntaxHighlighter.swift`: tree-sitter syntax highlighting, and which theme color each kind of code gets

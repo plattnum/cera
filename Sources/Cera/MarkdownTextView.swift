@@ -261,7 +261,7 @@ final class MarkdownTextView: NSTextView {
     /// ⌘-click opens a link; a plain click edits it like any other text.
     override func mouseDown(with event: NSEvent) {
         if event.modifierFlags.contains(.command), let url = linkURL(at: event) {
-            NSWorkspace.shared.open(url)
+            followLink(url)
             return
         }
         super.mouseDown(with: event)
@@ -392,7 +392,7 @@ final class MarkdownTextView: NSTextView {
     }
 
     @objc private func openLink(_ sender: NSMenuItem) {
-        if let url = sender.representedObject as? URL { NSWorkspace.shared.open(url) }
+        if let url = sender.representedObject as? URL { followLink(url) }
     }
 
     @objc private func copyLink(_ sender: NSMenuItem) {

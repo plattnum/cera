@@ -22,6 +22,8 @@ final class LiveStyler {
     private var settings: Settings
     /// Line ranges of the document's top-level blocks, kept in step with edits.
     private(set) var blocks: [NSRange] = []
+    /// The document's front matter, kept in step with edits like `blocks`.
+    private var frontMatter: NSRange?
     /// The document's link reference definitions, kept in step with edits like `blocks`.
     private var foundDefinitions: [MarkdownStyler.Definition] = []
     private var definitions = ""
@@ -53,6 +55,7 @@ final class LiveStyler {
         generation += 1
         let text = NSString(string: storage.string)
         (blocks, foundDefinitions) = MarkdownStyler.structure(in: text)
+        frontMatter = FrontMatter.range(in: text)
         definitions = MarkdownStyler.definitionText(foundDefinitions)
         pendingRegions = MarkdownStyler.regions(covering: blocks, length: text.length, target: regionLength)
         if text.length == 0 {
@@ -105,6 +108,13 @@ final class LiveStyler {
         // Old coordinates of the edit.
         let oldStart = editedRange.location
         let oldEnd = NSMaxRange(editedRange) - delta
+
+        // Front matter changes how everything in it parses, so an edit that makes, moves, or breaks its
+        // closing line restyles the document.
+        if frontMatterChanged(by: editedRange, delta: delta, in: text) {
+            restyleAll(caret: caret)
+            return
+        }
 
         // The blocks the edit touches, plus one on each side, since an edit can merge
         // or split blocks (deleting a blank line, typing a --- under a paragraph).
@@ -209,6 +219,28 @@ final class LiveStyler {
     }
 
     // MARK: - Private
+
+    /// Updates `frontMatter` after an edit, and returns whether it changed other than by the edit's own
+    /// length. It is looked for again only when the edit could change it: on the first line, inside it, or,
+    /// with an opening line and no front matter yet, on a line that could close it.
+    private func frontMatterChanged(by editedRange: NSRange, delta: Int, in text: NSString) -> Bool {
+        let firstLine = text.lineRange(for: NSRange(location: 0, length: 0))
+        let expected: NSRange?
+        let mayChange: Bool
+        if let old = frontMatter, editedRange.location <= NSMaxRange(old) {
+            expected = NSRange(location: 0, length: old.length + delta)
+            mayChange = true
+        } else {
+            expected = frontMatter
+            let edited = text.lineRange(for: NSRange(location: min(editedRange.location, text.length), length: editedRange.length))
+            mayChange = editedRange.location < NSMaxRange(firstLine)
+                || (frontMatter == nil && FrontMatter.opens(text)
+                    && text.substring(with: edited).components(separatedBy: .newlines).contains(where: FrontMatter.isFence))
+        }
+        guard mayChange else { return false }
+        frontMatter = FrontMatter.range(in: text)
+        return frontMatter != expected
+    }
 
     /// The block containing `location`, by binary search (blocks are in order and don't overlap).
     private func block(containing location: Int) -> NSRange? {

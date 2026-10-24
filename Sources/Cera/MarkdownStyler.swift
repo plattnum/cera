@@ -83,6 +83,9 @@ struct MarkdownStyler {
         guard region.length > 0, NSMaxRange(region) <= text.length else { return }
         let body = text.substring(with: region)
         let source = definitions.isEmpty ? body : body + "\n\n" + definitions
+        // The parser reads front matter as blank lines; it is styled on its own.
+        let (parsable, frontMatter) = FrontMatter.parsable(text, region: region)
+        let parsed = definitions.isEmpty ? parsable : parsable + "\n\n" + definitions
         let scratch = NSTextStorage(string: source)
         let inRegion = caret >= region.location
             && (caret < NSMaxRange(region) || (caret == text.length && NSMaxRange(region) == text.length))
@@ -99,7 +102,7 @@ struct MarkdownStyler {
             context.precededByLine = !text.substring(with: previous).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
         context.styleBlankLines()
-        let document = Document(parsing: source)
+        let document = Document(parsing: parsed)
         context.blockRanges = Self.blockRanges(of: document, in: context.text, map: context.map)
         // A table that interrupts a paragraph leaves the paragraph, and everything in it, without positions,
         // so none of it could be styled. Parsed apart, at the table's first line, both have them.
@@ -114,6 +117,7 @@ struct MarkdownStyler {
         }
         var walker = StyleWalker(context: context)
         walker.visit(document)
+        if let frontMatter { context.styleFrontMatter(frontMatter) }
         context.dimDefinitionLines()
         context.finish()
         scratch.endEditing()
@@ -144,14 +148,17 @@ struct MarkdownStyler {
     /// reference definitions in it, both in document coordinates.
     static func structure(in text: NSString, region: NSRange? = nil) -> (blocks: [NSRange], definitions: [Definition]) {
         let region = region ?? NSRange(location: 0, length: text.length)
-        let piece = NSString(string: text.substring(with: region))
+        // Front matter is blank to the parser, and a block of its own.
+        let (parsable, frontMatter) = FrontMatter.parsable(text, region: region)
+        let piece = NSString(string: parsable)
         let map = SourceMap(piece)
-        let document = Document(parsing: piece as String)
+        let document = Document(parsing: parsable)
         let ranges = blockRanges(of: document, in: piece, map: map)
         var definitions: [Definition] = []
         collectDefinitions(in: document, range: NSRange(location: 0, length: piece.length), childRanges: ranges,
                            text: piece, map: map, into: &definitions)
-        let blocks = ranges.filter { $0.length > 0 }.map { NSRange(location: region.location + $0.location, length: $0.length) }
+        let blocks = (frontMatter.map { [$0] } ?? [])
+            + ranges.filter { $0.length > 0 }.map { NSRange(location: region.location + $0.location, length: $0.length) }
         let shifted = definitions.map { Definition(location: region.location + $0.location, text: $0.text) }
         return (blocks, shifted.sorted { $0.location < $1.location })
     }
@@ -559,6 +566,16 @@ private final class StyleContext {
     // MARK: Blocks
 
     /// Blank lines are the gaps between blocks, like CSS margins.
+    /// Front matter (see `FrontMatter`): source for other tools, muted, in the code font.
+    func styleFrontMatter(_ range: NSRange) {
+        storage.addAttributes([
+            .font: theme.codeFont,
+            .foregroundColor: theme.marker,
+            .paragraphStyle: MarkdownStyler.paragraph(lineHeight: theme.codeLineHeight),
+            .baselineOffset: MarkdownStyler.baselineOffset(for: theme.codeFont, lineHeight: theme.codeLineHeight)
+        ], range: range)
+    }
+
     func styleBlankLines() {
         text.enumerateSubstrings(in: NSRange(location: 0, length: text.length), options: .byLines) { line, _, enclosing, _ in
             guard (line ?? "").trimmingCharacters(in: .whitespaces).isEmpty else { return }

@@ -11,7 +11,7 @@ enum InlineMarkup {
     /// A span counts when the selection touches any part of it: selecting rendered text
     /// selects only the visible characters, never the hidden markers around them.
     static func markers(in text: NSString, region: NSRange, touching selection: NSRange) -> [NSRange] {
-        let piece = NSString(string: text.substring(with: region))
+        let piece = NSString(string: FrontMatter.parsable(text, region: region).text)
         let map = SourceMap(piece)
         let local = NSRange(location: selection.location - region.location, length: selection.length)
         var found: [NSRange] = []

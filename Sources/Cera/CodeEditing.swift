@@ -26,7 +26,7 @@ struct FencedCodeBlock: Equatable {
     /// top-level blocks, so the block parses in its real context.
     static func find(in text: NSString, at location: Int, region: NSRange) -> FencedCodeBlock? {
         guard location >= region.location, location <= NSMaxRange(region), NSMaxRange(region) <= text.length else { return nil }
-        let source = text.substring(with: region) as NSString
+        let source = FrontMatter.parsable(text, region: region).text as NSString
         let starts = SourceMap(source).lineStarts
         let lineIndex = starts.lastIndex { $0 <= location - region.location } ?? 0
         guard let block = CodeBlockText.codeBlock(in: Document(parsing: source as String), onLine: lineIndex + 1),

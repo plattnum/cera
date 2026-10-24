@@ -20,7 +20,8 @@ enum Outline {
         let source = NSString(string: text)
         let map = SourceMap(source)
         var items: [OutlineItem] = []
-        for case let heading as Heading in Document(parsing: text).children {
+        let parsable = FrontMatter.parsable(source, region: NSRange(location: 0, length: source.length)).text
+        for case let heading as Heading in Document(parsing: parsable).children {
             guard let range = map.range(heading.range) else { continue }
             let title = plainText(of: heading).split(whereSeparator: \.isWhitespace).joined(separator: " ")
             guard !title.isEmpty else { continue }

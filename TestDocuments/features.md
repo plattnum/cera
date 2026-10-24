@@ -1,7 +1,13 @@
+---
+title: Cera Feature Tour
+tags: [markdown, test]
+---
 Cera Feature Tour
 =================
 
 Every Markdown feature Cera renders, in one place. Move the cursor onto a line to see its Markdown; move away and it renders again.
+
+The muted lines at the very top are front matter, metadata for tools like Jekyll, Hugo and Obsidian. Cera shows it as source and leaves it out of the document.
 
 ## Text
 

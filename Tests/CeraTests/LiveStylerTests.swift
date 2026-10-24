@@ -128,6 +128,49 @@ final class LiveStylerTests: XCTestCase {
         }
     }
 
+    /// Front matter, which an edit can make, move, or break far from the edit.
+    func testIncrementalEditsAroundFrontMatterMatchFullRestyle() {
+        let document = """
+        ---
+        title: Notes
+        tags: [a, b]
+        ---
+        # Heading
+
+        Body with **bold**.
+
+        ---
+
+        After a rule.
+        """
+        for seed: UInt64 in [5, 11, 2026] {
+            runRandomEdits(seed: seed, document: document)
+            if testRun?.failureCount ?? 0 > 0 { return }
+        }
+    }
+
+    func testClosingOrOpeningFrontMatterFarFromTheEditRestylesIt() {
+        // The edits are blocks away from the start, beyond the region an edit restyles on its own.
+        let open = "---\ntitle: Notes\n\nPara one.\n\nPara two.\n\nPara three.\n\nPara four.\n"
+        let closed = "---\ntitle: Notes\n---\n\nPara one.\n\nPara two.\n\nPara three.\n\nPara four.\n"
+        let cases: [(document: String, edit: NSRange, replacement: String, label: String)] = [
+            (open, NSRange(location: (open as NSString).range(of: "Para four").location, length: 0), "---\n", "closing it far down"),
+            (closed, NSRange(location: (closed as NSString).range(of: "---\n\nPara one").location, length: 4), "", "deleting its closing line"),
+            (closed, NSRange(location: 0, length: 1), "", "breaking its opening line")
+        ]
+        for test in cases {
+            let storage = NSTextStorage(string: test.document)
+            let styler = LiveStyler(storage: storage, settings: settings)
+            styler.restyleAll(caret: (test.document as NSString).length)
+            storage.replaceCharacters(in: test.edit, with: test.replacement)
+            let length = (test.replacement as NSString).length
+            let caret = test.edit.location + length
+            styler.textChanged(editedRange: NSRange(location: test.edit.location, length: length),
+                               delta: length - test.edit.length, caret: caret)
+            assertSameStyling(storage, fullyStyled(storage.string, caret: caret), test.label)
+        }
+    }
+
     /// A longer run for stress testing: CERA_STRESS_FILE=doc.md CERA_STRESS_SEEDS=30
     func testStressIncrementalEdits() throws {
         let env = ProcessInfo.processInfo.environment

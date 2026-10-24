@@ -2,6 +2,13 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.5 (2026-10-24)
+
+- **Front matter.** Metadata at the top of a file, YAML between `---` lines (Jekyll, Obsidian, docs sites) or
+  TOML between `+++` lines (Hugo), used to show as a horizontal rule and a huge heading, and its first lines
+  were listed in the outline. It now shows as muted source in the code font, still editable, and the document
+  below it renders as usual. A `---` anywhere else, or with no closing line, is Markdown as before.
+
 ## 0.6.4 (2026-10-24)
 
 - **Fixed: blocks right after another block.** When an image, table, code block, quote, or rule starts on the

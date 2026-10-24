@@ -156,6 +156,8 @@ xattr -dr com.apple.quarantine Cera.app
 - View ▸ Show Outline (⌃⌘S) opens a sidebar listing the document's headings. Click one to jump to it; the section you're reading stays highlighted as you scroll, and the list updates as you type or when the file changes on disk. New windows open with the outline shown or hidden as you last left it.
 - Follows changes made to the open file on disk, such as an agent editing it: the window shows the new text within a moment, keeping the caret and the text in view in place. If the window has unsaved edits, a banner asks first: Keep Mine saves your version over the file, Load from Disk discards your edits. Saving over a changed file still brings up the system's "changed by another application" alert.
 - Click a task's box to check or uncheck it; the click edits the `[ ]` in the file and ⌘Z undoes it. Format ▸ List ▸ Toggle Checked (⌘L, as in Obsidian) does the same for the selected lines, and turns a line that isn't a task into one.
+- Front matter at the top of a file (YAML between `---` lines, or TOML between `+++`) shows as muted
+  source, not as a rule and a heading, and stays out of the outline.
 - Return continues lists and quotes; Return on an empty item ends the list.
 - Code blocks are highlighted with tree-sitter, using each language's real grammar (see the list at the top), in every theme's colors: keywords, types, function names, strings, numbers, comments, constants, HTML tags, JSON and YAML keys, and added and removed lines in a diff. Code inside quotes and lists is highlighted too. Languages are recognized by their usual names and aliases after the fence (`py`, `js`, `ts`, `sh`, `rs`, `cs`, `c#`, `yml`…). A few other languages (PHP, Scala, Dart, and more) get simple keyword colors.
 - Each code block shows its language in small text in its top-right corner; hovering swaps it for the copy button.
@@ -179,6 +181,7 @@ xattr -dr com.apple.quarantine Cera.app
 - `Sources/Cera/LiveStyler.swift`: keeps styling current while editing, restyling only what changed
 - `Sources/Cera/FormatCommands.swift`, `FormatBar.swift`, `InlineMarkup.swift`: heading, list, quote, insert, and clear-formatting commands, and the floating format bar
 - `Sources/Cera/Checkboxes.swift`: checking and unchecking task boxes, by click or Toggle Checked
+- `Sources/Cera/FrontMatter.swift`: finds front matter and keeps it out of every Markdown parse
 - `Sources/Cera/SourceMap.swift`: maps parser positions to text offsets
 - `Sources/Cera/ImageStore.swift`: loads and caches images
 - `Sources/Cera/ImageImporter.swift`: decides image paths and copies images into `assets/`

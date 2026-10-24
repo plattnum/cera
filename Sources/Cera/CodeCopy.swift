@@ -8,7 +8,7 @@ enum CodeBlockText {
     /// top-level blocks, so the block parses in its real context.
     static func code(in text: NSString, at location: Int, region: NSRange) -> String? {
         guard NSLocationInRange(location, region) else { return nil }
-        let source = text.substring(with: region) as NSString
+        let source = FrontMatter.parsable(text, region: region).text as NSString
         let map = SourceMap(source)
         // 1-based, as swift-markdown counts lines.
         let line = (map.lineStarts.lastIndex { $0 <= location - region.location } ?? 0) + 1

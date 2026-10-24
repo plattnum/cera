@@ -99,6 +99,35 @@ final class LiveStylerTests: XCTestCase {
         }
     }
 
+    /// Blocks with no blank line between them, including tables that interrupt a paragraph, which are
+    /// styled apart from it.
+    func testIncrementalEditsAroundAdjacentBlocksMatchFullRestyle() {
+        let document = """
+        ## Heading
+        Some **bold** text:
+        | A | B |
+        |---|---|
+        | 1 | 2 |
+        - [x] task
+        1. [ ] numbered
+        > - [ ] quoted task
+        Intro:
+        ```swift
+        let a = 1
+        ```
+        - Item:
+          | A | B |
+          |---|---|
+          | 1 | 2 |
+
+        last
+        """
+        for seed: UInt64 in [3, 17, 2026] {
+            runRandomEdits(seed: seed, document: document)
+            if testRun?.failureCount ?? 0 > 0 { return }
+        }
+    }
+
     /// A longer run for stress testing: CERA_STRESS_FILE=doc.md CERA_STRESS_SEEDS=30
     func testStressIncrementalEdits() throws {
         let env = ProcessInfo.processInfo.environment

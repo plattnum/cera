@@ -2,6 +2,16 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.4 (2026-10-24)
+
+- **Fixed: blocks right after another block.** When an image, table, code block, quote, or rule starts on the
+  line right after another block, with no blank line between them, its picture, grid, panel, bar, or rule was
+  drawn up in the gap above it: a table's border could cut through the heading above. They now sit below the
+  gap, where they do after a blank line.
+- **Fixed: a table right after a paragraph.** A table on the line after a paragraph took the paragraph as its
+  header row, hid its real header, and showed the `|---|` line as a row. Now the paragraph stays a paragraph, with its
+  formatting, and the table has its own header. The same goes for a table right after a list item's text.
+
 ## 0.6.3 (2026-10-24)
 
 - **Click a checkbox to tick it.** Click a task's box to check or uncheck it, as in Obsidian; the pointer becomes

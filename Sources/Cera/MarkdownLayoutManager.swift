@@ -292,14 +292,14 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
 
         storage.enumerateAttribute(.imageBlock, in: characters) { value, range, _ in
             guard let block = value as? ImageBlock else { return }
-            let line = lineFragmentRect(forGlyphAt: glyphIndexForCharacter(at: range.location), effectiveRange: nil)
+            let line = lineRect(forGlyphAt: glyphIndexForCharacter(at: range.location))
             let frame = NSRect(x: columnX + block.x, y: origin.y + line.minY, width: block.size.width, height: block.size.height)
             block.image.draw(in: frame, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
         }
 
         storage.enumerateAttribute(.tableRow, in: characters) { value, range, _ in
             guard let row = value as? TableRowInfo, let left = row.edges.first, let right = row.edges.last else { return }
-            let line = lineFragmentRect(forGlyphAt: glyphIndexForCharacter(at: range.location), effectiveRange: nil)
+            let line = lineRect(forGlyphAt: glyphIndexForCharacter(at: range.location))
             let top = origin.y + line.minY
             theme.rule.setFill()
             // Top border of every row, bottom border of the last, and the column lines.
@@ -382,11 +382,25 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
         let line = lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
         let paragraph = storage.attribute(.paragraphStyle, at: location, effectiveRange: nil) as? NSParagraphStyle
         let textStart = line.minX + (paragraph?.firstLineHeadIndent ?? theme.listIndent)
-        // Center on the text line, not the fragment, which also holds the spacing before and after the item.
-        // The used rectangle starts where the text does, after any spacing before it.
-        let text = lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: nil)
+        // Center on the text line, not the fragment, which also holds the spacing after the item.
         let lineHeight = paragraph?.minimumLineHeight ?? theme.lineHeight
-        return (textStart, text.minY + lineHeight / 2)
+        return (textStart, lineRect(forGlyphAt: glyph).minY + lineHeight / 2)
+    }
+
+    /// The line fragment holding a glyph, without the spacing before its paragraph, in container coordinates.
+    /// A block that directly follows another, with no blank line between them, gets the block gap as
+    /// spacing before it (`MarkdownStyler.separateAdjacentBlocks`), and that space is part of the fragment.
+    /// Anything drawn for the block (its marker, image, table grid, code panel or quote bar) starts below it.
+    func lineRect(forGlyphAt glyph: Int) -> NSRect {
+        Self.withoutSpacingBefore(lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil),
+                                  used: lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: nil))
+    }
+
+    /// A fragment cut down to start where its used rectangle does, which is where the text starts,
+    /// after any spacing before the paragraph (none at the document's start).
+    private static func withoutSpacingBefore(_ fragment: NSRect, used: NSRect) -> NSRect {
+        let top = min(max(used.minY, fragment.minY), fragment.maxY)
+        return NSRect(x: fragment.minX, y: top, width: fragment.width, height: fragment.maxY - top)
     }
 
     /// The checkbox drawn for the task item whose marker starts at `location`, in container coordinates.
@@ -411,12 +425,13 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
         tick.stroke()
     }
 
-    /// The union of the line fragment rectangles covering a character range, in container coordinates.
-    private func unionOfLines(for characters: NSRange) -> NSRect {
+    /// The union of the line fragment rectangles covering a character range, in container coordinates,
+    /// without the spacing before the first line (see `lineRect(forGlyphAt:)`).
+    func unionOfLines(for characters: NSRange) -> NSRect {
         let glyphs = glyphRange(forCharacterRange: characters, actualCharacterRange: nil)
         var union = NSRect.null
-        enumerateLineFragments(forGlyphRange: glyphs) { rect, _, _, _, _ in
-            union = union.union(rect)
+        enumerateLineFragments(forGlyphRange: glyphs) { rect, used, _, _, _ in
+            union = union.union(Self.withoutSpacingBefore(rect, used: used))
         }
         return union
     }

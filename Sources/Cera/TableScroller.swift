@@ -209,7 +209,8 @@ extension MarkdownTextView {
 
     /// Places (or creates) the scroller over `table`. Returns false when the table can't have one.
     private func showTableScroller(over table: NSRange) -> Bool {
-        guard let layoutManager, let container = textContainer, let storage = textStorage else { return false }
+        guard let layoutManager = layoutManager as? MarkdownLayoutManager, let container = textContainer,
+              let storage = textStorage else { return false }
         var edges: [CGFloat]?
         storage.enumerateAttribute(.tableRow, in: table) { value, _, stop in
             if let row = value as? TableRowInfo, row.edges.count > 1 {
@@ -219,13 +220,11 @@ extension MarkdownTextView {
         }
         guard let edges, let first = edges.first, let last = edges.last else { return false }
 
-        var lines = NSRect.null
-        let glyphs = layoutManager.glyphRange(forCharacterRange: table, actualCharacterRange: nil)
-        layoutManager.enumerateLineFragments(forGlyphRange: glyphs) { rect, _, _, _, _ in
-            lines = lines.union(rect)
-        }
+        // The table's lines, without any space before the table, where the scroller would cover what's above it.
+        let lines = layoutManager.unionOfLines(for: table)
         guard !lines.isNull else { return false }
-        let firstLine = layoutManager.lineFragmentRect(forGlyphAt: glyphs.location, effectiveRange: nil)
+        let glyphs = layoutManager.glyphRange(forCharacterRange: table, actualCharacterRange: nil)
+        let firstLine = layoutManager.lineRect(forGlyphAt: glyphs.location)
 
         let isNew = tableScrollers[table.location] == nil
         let scroller = tableScrollers[table.location] ?? {

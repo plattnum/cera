@@ -101,6 +101,17 @@ struct MarkdownStyler {
         context.styleBlankLines()
         let document = Document(parsing: source)
         context.blockRanges = Self.blockRanges(of: document, in: context.text, map: context.map)
+        // A table that interrupts a paragraph leaves the paragraph, and everything in it, without positions,
+        // so none of it could be styled. Parsed apart, at the table's first line, both have them.
+        if let split = Self.interruptedTableStart(in: document, blocks: context.blockRanges), split > 0, split < region.length {
+            scratch.endEditing()
+            for part in [NSRange(location: region.location, length: split),
+                         NSRange(location: region.location + split, length: region.length - split)] {
+                styleRegion(storage, text: text, region: part, caret: caret, baseURL: baseURL,
+                            availableWidth: availableWidth, definitions: definitions)
+            }
+            return
+        }
         var walker = StyleWalker(context: context)
         walker.visit(document)
         context.dimDefinitionLines()
@@ -239,18 +250,45 @@ struct MarkdownStyler {
         }
     }
 
+    /// Where the first table that interrupts a paragraph starts, if there is one (see `blockRanges`).
+    private static func interruptedTableStart(in document: Document, blocks: [NSRange]) -> Int? {
+        let children = Array(document.children)
+        for index in children.indices.dropFirst() where index < blocks.count {
+            if children[index] is Table, children[index - 1] is Paragraph, children[index - 1].range == nil,
+               blocks[index - 1].length > 0 {
+                return blocks[index].location
+            }
+        }
+        return nil
+    }
+
     /// The line ranges of a parsed document's top-level blocks, one per child in order
     /// (zero length when a child has no position). A block ends where the next begins: the parser
     /// can report an end position on the following line (seen with underlined headings
     /// and unclosed code fences), and overlapping blocks would make the result depend
     /// on where parsing started.
     static func blockRanges(of document: Document, in text: NSString, map: SourceMap) -> [NSRange] {
-        let spans: [(start: Int, end: Int)?] = document.children.map { child in
+        let children = Array(document.children)
+        var spans: [(start: Int, end: Int)?] = children.map { child in
             guard let range = map.range(child.range) else { return nil }
             let start = text.lineRange(for: NSRange(location: min(range.location, text.length), length: 0)).location
             let lastCharacter = max(start, NSMaxRange(range) - 1)
             let end = NSMaxRange(text.lineRange(for: NSRange(location: min(lastCharacter, text.length), length: 0)))
             return (start, end)
+        }
+        // A table that interrupts a paragraph is reported from the paragraph's first line, and the paragraph
+        // has no position. The table is its last lines (one per body row, the delimiter, and the header), so
+        // it starts there, and the paragraph gets the lines before it.
+        for (index, child) in children.enumerated() {
+            guard let table = child as? Table, let span = spans[index] else { continue }
+            var start = text.lineRange(for: NSRange(location: span.end - 1, length: 0)).location
+            for _ in 0..<(table.body.childCount + 1) where start > span.start {
+                start = text.lineRange(for: NSRange(location: start - 1, length: 0)).location
+            }
+            spans[index] = (start, span.end)
+            if start > span.start, index > 0, spans[index - 1] == nil, children[index - 1] is Paragraph {
+                spans[index - 1] = (span.start, start)
+            }
         }
         // The start of the next positioned block after each index, found in one backward pass.
         var nextStarts = [Int](repeating: Int.max, count: spans.count)
@@ -867,7 +905,8 @@ private final class StyleContext {
 
     func styleTable(_ table: Table) {
         guard let range = range(table) else { return }
-        let rowLines = lines(in: range)
+        // From the end: a table that interrupts a paragraph is reported from the paragraph's first line.
+        let rowLines = Array(lines(in: range).suffix(table.body.childCount + 2))
         guard rowLines.count >= 2 else { return }
 
         // Line 1 is the header, line 2 the |---| delimiter, the rest the body.

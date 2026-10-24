@@ -3,6 +3,8 @@
 Files for checking how Cera renders Markdown. Open any of them in Cera.
 
 - `features.md`: every feature Cera renders, in one short document.
+- `adjacent-blocks.md`: each kind of block on the line right after another block, with no blank line between
+  them, where list markers, checkboxes, images, tables, code panels, quote bars, and rules must still line up.
 - `code-languages.md`: a realistic example in each language syntax highlighting covers, for checking every color.
 - `mermaid.md`: every kind of Mermaid diagram Cera draws, nested diagrams, and blocks that stay code.
 - `markdown-syntax-guide.md`: John Gruber's Markdown syntax guide as a test page, from

@@ -697,9 +697,13 @@ private final class StyleContext {
         addMarker(marker)
         guard !onActiveLine(marker.location) else { return }
 
+        // The parser doesn't see task items inside quotes (`> - [ ] a`), so the marker's own checkbox counts too.
+        let box = match.range(at: 3)
         let symbol: String
         if let checkbox = item.checkbox {
             symbol = checkbox == .checked ? "☑" : "☐"
+        } else if box.location != NSNotFound {
+            symbol = text.character(at: box.location + 1) == 32 ? "☐" : "☑"
         } else if let list = item.parent as? OrderedList {
             symbol = "\(Int(list.startIndex) + item.indexInParent)."
         } else {

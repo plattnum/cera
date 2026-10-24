@@ -110,6 +110,8 @@ struct CeraCommands: Commands {
                     .keyboardShortcut("o", modifiers: [.command, .option])
                 Button("Task") { send(#selector(MarkdownTextView.toggleTaskList(_:))) }
                     .keyboardShortcut("x", modifiers: [.command, .option])
+                Button("Toggle Checked") { send(#selector(MarkdownTextView.toggleChecked(_:))) }
+                    .keyboardShortcut("l")
                 Divider()
                 Button("Indent") { send(#selector(MarkdownTextView.indentList(_:))) }
                     .keyboardShortcut("]")

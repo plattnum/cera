@@ -335,16 +335,12 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
 
         storage.enumerateAttribute(.listBullet, in: characters) { value, range, _ in
             guard let symbol = value as? String else { return }
-            let glyph = glyphIndexForCharacter(at: range.location)
-            let line = lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
-            let paragraph = storage.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as? NSParagraphStyle
-            let textStart = origin.x + line.minX + (paragraph?.firstLineHeadIndent ?? theme.listIndent)
-            // Center on the text line, not the fragment, which also holds the spacing after the item.
-            let lineHeight = paragraph?.minimumLineHeight ?? theme.lineHeight
-            let centerY = origin.y + line.minY + lineHeight / 2
+            let position = markerPosition(at: range.location)
+            let textStart = origin.x + position.textStart
+            let centerY = origin.y + position.centerY
 
             if symbol == "☐" || symbol == "☑" {
-                drawCheckbox(checked: symbol == "☑", rightEdge: textStart - 10, centerY: centerY)
+                drawCheckbox(checked: symbol == "☑", in: checkboxRect(at: range.location).offsetBy(dx: origin.x, dy: origin.y))
                 return
             }
             if symbol == "◦" {
@@ -378,9 +374,29 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
         }
     }
 
-    private func drawCheckbox(checked: Bool, rightEdge: CGFloat, centerY: CGFloat) {
+    /// Where the list item whose marker starts at `location` draws its marker, in container coordinates:
+    /// the x where the item's text starts, and the middle of its first line of text.
+    func markerPosition(at location: Int) -> (textStart: CGFloat, centerY: CGFloat) {
+        guard let storage = textStorage, location < storage.length else { return (0, 0) }
+        let glyph = glyphIndexForCharacter(at: location)
+        let line = lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
+        let paragraph = storage.attribute(.paragraphStyle, at: location, effectiveRange: nil) as? NSParagraphStyle
+        let textStart = line.minX + (paragraph?.firstLineHeadIndent ?? theme.listIndent)
+        // Center on the text line, not the fragment, which also holds the spacing before and after the item.
+        // The used rectangle starts where the text does, after any spacing before it.
+        let text = lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: nil)
+        let lineHeight = paragraph?.minimumLineHeight ?? theme.lineHeight
+        return (textStart, text.minY + lineHeight / 2)
+    }
+
+    /// The checkbox drawn for the task item whose marker starts at `location`, in container coordinates.
+    func checkboxRect(at location: Int) -> NSRect {
         let side: CGFloat = 13
-        let box = NSRect(x: rightEdge - side, y: centerY - side / 2, width: side, height: side)
+        let position = markerPosition(at: location)
+        return NSRect(x: position.textStart - 10 - side, y: position.centerY - side / 2, width: side, height: side)
+    }
+
+    private func drawCheckbox(checked: Bool, in box: NSRect) {
         let path = NSBezierPath(roundedRect: box.insetBy(dx: 0.5, dy: 0.5), xRadius: 3, yRadius: 3)
         theme.marker.setStroke()
         path.lineWidth = 1

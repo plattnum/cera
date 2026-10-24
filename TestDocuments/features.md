@@ -45,8 +45,20 @@ Underlined heading
 4. Can start at any number
 5. And keep counting
 
+## Checkboxes
+
+Click a box to check or uncheck it; ⌘Z undoes it. ⌘L (Format ▸ List ▸ Toggle Checked) does the same for the line you are on.
+
 - [ ] An open task
 - [x] A finished task
+- [X] Finished with a capital X
+- [x] A task with **formatting** and a [link](https://example.com)
+  - [x] A nested task
+  - [x] A nested finished task
+1. [ ] A numbered task
+2. [x] A numbered finished task
+
+> - [ ] A task inside a quote
 
 ## Quotes
 

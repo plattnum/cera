@@ -258,8 +258,13 @@ final class MarkdownTextView: NSTextView {
 
     // MARK: - Links
 
-    /// ⌘-click opens a link; a plain click edits it like any other text.
+    /// ⌘-click opens a link; a plain click edits it like any other text. A plain click on a task's
+    /// box checks or unchecks it.
     override func mouseDown(with event: NSEvent) {
+        let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        if modifiers.isEmpty, toggleCheckbox(at: convert(event.locationInWindow, from: nil)) {
+            return
+        }
         if event.modifierFlags.contains(.command), let url = linkURL(at: event) {
             followLink(url)
             return
@@ -267,13 +272,15 @@ final class MarkdownTextView: NSTextView {
         super.mouseDown(with: event)
     }
 
-    /// Shows the pointing hand while ⌘ is held over a link, and the copy button over a code block.
+    /// Shows the pointing hand over a task's box and while ⌘ is held over a link, and the copy button
+    /// over a code block.
     override func mouseMoved(with event: NSEvent) {
         super.mouseMoved(with: event)
-        if event.modifierFlags.contains(.command), linkURL(at: event) != nil {
+        let point = convert(event.locationInWindow, from: nil)
+        if event.modifierFlags.contains(.command) ? linkURL(at: event) != nil : checkboxMarker(at: point) != nil {
             NSCursor.pointingHand.set()
         }
-        updateCodeCopyButton(at: convert(event.locationInWindow, from: nil))
+        updateCodeCopyButton(at: point)
     }
 
     override func mouseExited(with event: NSEvent) {

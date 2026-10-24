@@ -2,6 +2,15 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.3 (2026-10-24)
+
+- **Click a checkbox to tick it.** Click a task's box to check or uncheck it, as in Obsidian; the pointer becomes
+  a hand over a box, and ⌘Z undoes it. Format ▸ List ▸ Toggle Checked (⌘L, Obsidian's shortcut) does the same
+  for the lines you're on, and turns a line that isn't a task into one.
+- **Fixed: list markers drawn above their text.** A list right after another block, with no blank line between
+  them, drew its first box, number, or bullet a line above its text. It now sits beside it.
+- **Fixed: tasks inside quotes.** `> - [ ] task` showed a bullet instead of a checkbox.
+
 ## 0.6.2 (2026-10-21)
 
 - **Links to headings work.** ⌘-click a `#section` link, such as an entry in a README's table of contents, and

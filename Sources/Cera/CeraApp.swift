@@ -38,6 +38,13 @@ struct CeraCommands: Commands {
                 .keyboardShortcut("t")
         }
 
+        // Pastes the clipboard's text as it is: a URL over selected text stays a URL instead of making a link.
+        // ⇧⌘V, Obsidian's key for it.
+        CommandGroup(after: .pasteboard) {
+            Button("Paste and Match Style") { send(#selector(NSTextView.pasteAsPlainText(_:))) }
+                .keyboardShortcut("v", modifiers: [.command, .shift])
+        }
+
         CommandGroup(after: .textEditing) {
             Toggle("Check Spelling While Typing", isOn: $checksSpelling)
         }

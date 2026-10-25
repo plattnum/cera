@@ -35,7 +35,7 @@ Underlined heading
 - Bare address: https://github.com
 - Relative file: [the syntax guide](markdown-syntax-guide.md)
 
-⌘-click a link to open it.
+⌘-click a link to open it. To make one, select some text and paste a URL over it: the text becomes `[text](url)`. Paste and Match Style (⇧⌘V) pastes the URL as it is.
 
 [spec]: https://spec.commonmark.org
 
@@ -114,6 +114,7 @@ An image inside a sentence shows its alt text: ![inline picture](../Design/icons
 
 ## A hard-wrapped paragraph
 
-This paragraph is hard-wrapped, the way many plain-text files are written,
+This [paragraph](https://) is [hard](https://www.google.com/search?q=razer+blackwidows+v4+pro+mac+compatibility&oq=razer+blackwidows+v4+pro+mac+compatibility&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIJCAEQIRgKGKAB0gEIODUwOGowajSoAgCwAgE&sourceid=chrome&source=chrome.ob&ie=UTF-8)-wrapped, the way many plain-text files are written,
 with a line break every seventy characters or so. Cera keeps these line
-breaks, like Typora; turn on View ▸ Flow Hard-Wrapped Paragraphs to join them.
+breaks, like [Typora](https://www.rtings.com/keyboard/reviews/razer/blackwidow-v4-pro); turn on View ▸ Flow Hard-Wrapped  tested
+ to join them.

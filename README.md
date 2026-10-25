@@ -156,6 +156,8 @@ xattr -dr com.apple.quarantine Cera.app
 - View ▸ Show Outline (⌃⌘S) opens a sidebar listing the document's headings. Click one to jump to it; the section you're reading stays highlighted as you scroll, and the list updates as you type or when the file changes on disk. New windows open with the outline shown or hidden as you last left it.
 - Follows changes made to the open file on disk, such as an agent editing it: the window shows the new text within a moment, keeping the caret and the text in view in place. If the window has unsaved edits, a banner asks first: Keep Mine saves your version over the file, Load from Disk discards your edits. Saving over a changed file still brings up the system's "changed by another application" alert.
 - Click a task's box to check or uncheck it; the click edits the `[ ]` in the file and ⌘Z undoes it. Format ▸ List ▸ Toggle Checked (⌘L, as in Obsidian) does the same for the selected lines, and turns a line that isn't a task into one.
+- Paste a URL over selected text to make it a link, `[text](url)`, as in Obsidian; Edit ▸ Paste and Match
+  Style (⇧⌘V) pastes the URL as it is.
 - Front matter at the top of a file (YAML between `---` lines, or TOML between `+++`) shows as muted
   source, not as a rule and a heading, and stays out of the outline.
 - Return continues lists and quotes; Return on an empty item ends the list.
@@ -180,6 +182,7 @@ xattr -dr com.apple.quarantine Cera.app
 - `Sources/Cera/MarkdownStyler.swift`: parses the document and styles each element, a region at a time
 - `Sources/Cera/LiveStyler.swift`: keeps styling current while editing, restyling only what changed
 - `Sources/Cera/FormatCommands.swift`, `FormatBar.swift`, `InlineMarkup.swift`: heading, list, quote, insert, and clear-formatting commands, and the floating format bar
+- `Sources/Cera/PasteLink.swift`: a URL pasted over selected text makes a link
 - `Sources/Cera/Checkboxes.swift`: checking and unchecking task boxes, by click or Toggle Checked
 - `Sources/Cera/FrontMatter.swift`: finds front matter and keeps it out of every Markdown parse
 - `Sources/Cera/SourceMap.swift`: maps parser positions to text offsets

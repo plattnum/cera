@@ -2,6 +2,14 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.6 (2026-10-25)
+
+- **Paste a URL over selected text to make a link.** Select some text and paste a web link or `mailto:` address,
+  and the text becomes `[text](url)`, as in Obsidian. It applies only when the clipboard is one link; anything
+  else pastes as before, and so does a link pasted into code, an existing link, or front matter.
+- **Paste and Match Style (⇧⌘V)**, new in the Edit menu, pastes the clipboard as plain text, so a link can
+  still be pasted over a selection as it is.
+
 ## 0.6.5 (2026-10-24)
 
 - **Front matter.** Metadata at the top of a file, YAML between `---` lines (Jekyll, Obsidian, docs sites) or

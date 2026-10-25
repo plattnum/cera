@@ -127,6 +127,8 @@ final class MarkdownTextView: NSTextView {
     var languageChosen = false
     /// Where Copy Code puts the code. Tests use their own, to leave the clipboard alone.
     var codeCopyPasteboard: NSPasteboard = .general
+    /// Where Paste reads from. Tests use their own, to leave the clipboard alone.
+    var pastePasteboard: NSPasteboard = .general
     private var hoverArea: NSTrackingArea?
 
     /// The scrollers over tables too wide for the column (see TableScroller.swift), by the
@@ -186,9 +188,10 @@ final class MarkdownTextView: NSTextView {
         return true
     }
 
-    /// Pastes image files copied in Finder, or image data such as a screenshot.
+    /// Pastes image files copied in Finder, or image data such as a screenshot. A URL pasted over
+    /// selected text makes a link (see PasteLink.swift).
     override func paste(_ sender: Any?) {
-        let pasteboard = NSPasteboard.general
+        let pasteboard = pastePasteboard
         let files = imageFiles(on: pasteboard)
         if !files.isEmpty {
             insertImages(files, at: selectedRange().location, replacing: selectedRange())
@@ -203,6 +206,7 @@ final class MarkdownTextView: NSTextView {
             }
             return
         }
+        if let pasted = pasteboard.string(forType: .string), pasteLink(pasted) { return }
         super.paste(sender)
     }
 

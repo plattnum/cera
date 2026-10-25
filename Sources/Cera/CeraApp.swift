@@ -2,6 +2,9 @@ import SwiftUI
 
 @main
 struct CeraApp: App {
+    /// Opens the files `cera -r` asks for locked.
+    @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
+
     init() {
         // Start with an empty document, like Notepad, instead of an Open panel.
         UserDefaults.standard.register(defaults: ["NSShowAppCentricOpenPanelInsteadOfUntitledFile": false])
@@ -32,6 +35,7 @@ struct CeraCommands: Commands {
     @FocusedBinding(\.showsOutline) private var showsOutline
     @FocusedBinding(\.showsSource) private var showsSource
     @FocusedBinding(\.showsStatusBar) private var showsStatusBar
+    @FocusedBinding(\.isLocked) private var isLocked
     @AppStorage(TextZoom.key) private var zoom = 1.0
 
     var body: some Commands {
@@ -45,6 +49,7 @@ struct CeraCommands: Commands {
         CommandGroup(after: .pasteboard) {
             Button("Paste and Match Style") { send(#selector(NSTextView.pasteAsPlainText(_:))) }
                 .keyboardShortcut("v", modifiers: [.command, .shift])
+                .disabled(isLocked == true)
         }
 
         CommandGroup(after: .textEditing) {
@@ -63,6 +68,9 @@ struct CeraCommands: Commands {
             Button(showsSource == true ? "Show Rendered Markdown" : "Show Markdown Source") { showsSource?.toggle() }
                 .keyboardShortcut("/")
                 .disabled(showsSource == nil)
+            Button(isLocked == true ? "Unlock Editing" : "Lock Editing") { isLocked?.toggle() }
+                .keyboardShortcut("l", modifiers: [.command, .option])
+                .disabled(isLocked == nil)
             Toggle("Flow Hard-Wrapped Paragraphs", isOn: $joinsHardWrappedLines)
             Divider()
             // The keys of browsers and other Markdown editors.
@@ -88,74 +96,78 @@ struct CeraCommands: Commands {
         }
 
         CommandMenu("Format") {
-            Button("Bold") { send(#selector(MarkdownTextView.toggleBold(_:))) }
-                .keyboardShortcut("b")
-            Button("Italic") { send(#selector(MarkdownTextView.toggleItalic(_:))) }
-                .keyboardShortcut("i")
-            Button("Strikethrough") { send(#selector(MarkdownTextView.toggleStrikethrough(_:))) }
-                .keyboardShortcut("x", modifiers: [.command, .shift])
-            Button("Inline Code") { send(#selector(MarkdownTextView.toggleInlineCode(_:))) }
-                .keyboardShortcut("e")
-            Button("Link") { send(#selector(MarkdownTextView.insertLink(_:))) }
-                .keyboardShortcut("k")
-            Button("Clear Formatting") { send(#selector(MarkdownTextView.clearFormatting(_:))) }
-                .keyboardShortcut("\\")
+            // Nothing in it applies while editing is locked.
+            Group {
+                Button("Bold") { send(#selector(MarkdownTextView.toggleBold(_:))) }
+                    .keyboardShortcut("b")
+                Button("Italic") { send(#selector(MarkdownTextView.toggleItalic(_:))) }
+                    .keyboardShortcut("i")
+                Button("Strikethrough") { send(#selector(MarkdownTextView.toggleStrikethrough(_:))) }
+                    .keyboardShortcut("x", modifiers: [.command, .shift])
+                Button("Inline Code") { send(#selector(MarkdownTextView.toggleInlineCode(_:))) }
+                    .keyboardShortcut("e")
+                Button("Link") { send(#selector(MarkdownTextView.insertLink(_:))) }
+                    .keyboardShortcut("k")
+                Button("Clear Formatting") { send(#selector(MarkdownTextView.clearFormatting(_:))) }
+                    .keyboardShortcut("\\")
 
-            Divider()
-
-            Menu("Heading") {
-                Button("Paragraph") { send(#selector(MarkdownTextView.paragraph(_:))) }
-                    .keyboardShortcut("0", modifiers: [.command, .control])
-                Button("Heading 1") { send(#selector(MarkdownTextView.heading1(_:))) }
-                    .keyboardShortcut("1")
-                Button("Heading 2") { send(#selector(MarkdownTextView.heading2(_:))) }
-                    .keyboardShortcut("2")
-                Button("Heading 3") { send(#selector(MarkdownTextView.heading3(_:))) }
-                    .keyboardShortcut("3")
-                Button("Heading 4") { send(#selector(MarkdownTextView.heading4(_:))) }
-                    .keyboardShortcut("4")
-                Button("Heading 5") { send(#selector(MarkdownTextView.heading5(_:))) }
-                    .keyboardShortcut("5")
-                Button("Heading 6") { send(#selector(MarkdownTextView.heading6(_:))) }
-                    .keyboardShortcut("6")
                 Divider()
-                Button("Make Heading Larger") { send(#selector(MarkdownTextView.makeHeadingLarger(_:))) }
-                    .keyboardShortcut("=", modifiers: [.command, .control])
-                Button("Make Heading Smaller") { send(#selector(MarkdownTextView.makeHeadingSmaller(_:))) }
-                    .keyboardShortcut("-", modifiers: [.command, .control])
-            }
 
-            Menu("List") {
-                Button("Bulleted") { send(#selector(MarkdownTextView.toggleBulletedList(_:))) }
-                    .keyboardShortcut("u", modifiers: [.command, .option])
-                Button("Numbered") { send(#selector(MarkdownTextView.toggleNumberedList(_:))) }
-                    .keyboardShortcut("o", modifiers: [.command, .option])
-                Button("Task") { send(#selector(MarkdownTextView.toggleTaskList(_:))) }
-                    .keyboardShortcut("x", modifiers: [.command, .option])
-                Button("Toggle Checked") { send(#selector(MarkdownTextView.toggleChecked(_:))) }
-                    .keyboardShortcut("l")
+                Menu("Heading") {
+                    Button("Paragraph") { send(#selector(MarkdownTextView.paragraph(_:))) }
+                        .keyboardShortcut("0", modifiers: [.command, .control])
+                    Button("Heading 1") { send(#selector(MarkdownTextView.heading1(_:))) }
+                        .keyboardShortcut("1")
+                    Button("Heading 2") { send(#selector(MarkdownTextView.heading2(_:))) }
+                        .keyboardShortcut("2")
+                    Button("Heading 3") { send(#selector(MarkdownTextView.heading3(_:))) }
+                        .keyboardShortcut("3")
+                    Button("Heading 4") { send(#selector(MarkdownTextView.heading4(_:))) }
+                        .keyboardShortcut("4")
+                    Button("Heading 5") { send(#selector(MarkdownTextView.heading5(_:))) }
+                        .keyboardShortcut("5")
+                    Button("Heading 6") { send(#selector(MarkdownTextView.heading6(_:))) }
+                        .keyboardShortcut("6")
+                    Divider()
+                    Button("Make Heading Larger") { send(#selector(MarkdownTextView.makeHeadingLarger(_:))) }
+                        .keyboardShortcut("=", modifiers: [.command, .control])
+                    Button("Make Heading Smaller") { send(#selector(MarkdownTextView.makeHeadingSmaller(_:))) }
+                        .keyboardShortcut("-", modifiers: [.command, .control])
+                }
+
+                Menu("List") {
+                    Button("Bulleted") { send(#selector(MarkdownTextView.toggleBulletedList(_:))) }
+                        .keyboardShortcut("u", modifiers: [.command, .option])
+                    Button("Numbered") { send(#selector(MarkdownTextView.toggleNumberedList(_:))) }
+                        .keyboardShortcut("o", modifiers: [.command, .option])
+                    Button("Task") { send(#selector(MarkdownTextView.toggleTaskList(_:))) }
+                        .keyboardShortcut("x", modifiers: [.command, .option])
+                    Button("Toggle Checked") { send(#selector(MarkdownTextView.toggleChecked(_:))) }
+                        .keyboardShortcut("l")
+                    Divider()
+                    Button("Indent") { send(#selector(MarkdownTextView.indentList(_:))) }
+                        .keyboardShortcut("]")
+                    Button("Outdent") { send(#selector(MarkdownTextView.outdentList(_:))) }
+                        .keyboardShortcut("[")
+                }
+
+                Button("Quote") { send(#selector(MarkdownTextView.toggleQuote(_:))) }
+                    .keyboardShortcut("q", modifiers: [.command, .option])
+
                 Divider()
-                Button("Indent") { send(#selector(MarkdownTextView.indentList(_:))) }
-                    .keyboardShortcut("]")
-                Button("Outdent") { send(#selector(MarkdownTextView.outdentList(_:))) }
-                    .keyboardShortcut("[")
+
+                Menu("Insert") {
+                    Button("Image…") { send(#selector(MarkdownTextView.insertImage(_:))) }
+                        .keyboardShortcut("i", modifiers: [.command, .control])
+                    Button("Table") { send(#selector(MarkdownTextView.insertTable(_:))) }
+                        .keyboardShortcut("t", modifiers: [.command, .option])
+                    Button("Code Block") { send(#selector(MarkdownTextView.insertCodeBlock(_:))) }
+                        .keyboardShortcut("c", modifiers: [.command, .option])
+                    Button("Horizontal Rule") { send(#selector(MarkdownTextView.insertHorizontalRule(_:))) }
+                        .keyboardShortcut("-", modifiers: [.command, .option])
+                }
             }
-
-            Button("Quote") { send(#selector(MarkdownTextView.toggleQuote(_:))) }
-                .keyboardShortcut("q", modifiers: [.command, .option])
-
-            Divider()
-
-            Menu("Insert") {
-                Button("Image…") { send(#selector(MarkdownTextView.insertImage(_:))) }
-                    .keyboardShortcut("i", modifiers: [.command, .control])
-                Button("Table") { send(#selector(MarkdownTextView.insertTable(_:))) }
-                    .keyboardShortcut("t", modifiers: [.command, .option])
-                Button("Code Block") { send(#selector(MarkdownTextView.insertCodeBlock(_:))) }
-                    .keyboardShortcut("c", modifiers: [.command, .option])
-                Button("Horizontal Rule") { send(#selector(MarkdownTextView.insertHorizontalRule(_:))) }
-                    .keyboardShortcut("-", modifiers: [.command, .option])
-            }
+            .disabled(isLocked == true)
         }
     }
 

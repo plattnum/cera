@@ -1,7 +1,8 @@
 #!/bin/sh
-# Opens files in Cera from the terminal, each in its own window: cera [file ...]
+# Opens files in Cera from the terminal, each in its own window: cera [-r] [file ...]
 # A file that doesn't exist yet is created empty first, so `cera notes.md` starts a new note.
 # An image opens as a throwaway Markdown file in $TMPDIR that shows it, so `cera shot.png` views it.
+# -r opens the files with editing locked, to read them; it never creates a file.
 
 # Open the Cera.app this script ships in (Contents/Resources/cera), not whichever copy of
 # Cera Launch Services finds first; outside an app bundle, fall back to Cera by name.
@@ -11,6 +12,12 @@ case "$app" in
     *) app=Cera ;;
 esac
 
+locked=false
+if [ "$1" = "-r" ]; then
+    locked=true
+    shift
+    [ $# -gt 0 ] || { echo "usage: cera [-r] [file ...]" >&2; exit 2; }
+fi
 if [ $# -eq 0 ]; then
     exec open -a "$app"
 fi
@@ -28,7 +35,15 @@ for file in "$@"; do
             printf '![%s](%s)\n' "${name%.*}" "$encoded" > "$file" || exit 1
             ;;
     esac
-    [ -e "$file" ] || : > "$file" || exit 1
+    if $locked; then
+        [ -e "$file" ] || { echo "cera: no such file: $file" >&2; exit 1; }
+        # Cera opens the file locked when sent this URL; JavaScript percent-encodes any path.
+        path=$(osascript -l JavaScript -e 'function run(argv) { return encodeURIComponent(argv[0]) }' \
+            "$(realpath "$file")") || exit 1
+        file="cera://open-locked?path=$path"
+    else
+        [ -e "$file" ] || : > "$file" || exit 1
+    fi
     set -- "$@" "$file"
 done
 exec open -a "$app" -- "$@"

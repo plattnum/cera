@@ -28,6 +28,17 @@
     <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>local.cera.app</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>cera</string>
+            </array>
+        </dict>
+    </array>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>

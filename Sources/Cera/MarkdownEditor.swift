@@ -11,6 +11,10 @@ struct MarkdownEditor: NSViewRepresentable {
     var joinsHardWrappedLines = false
     /// Show the Markdown source instead of rendering it.
     var showsSource = false
+    /// Lock editing (see LockEditing.swift).
+    var isLocked = false
+    /// Called when typing is refused because editing is locked.
+    var onRefusedEdit: (() -> Void)?
     /// The document's undo manager. Edits registered on it mark the document as edited.
     var undoManager: UndoManager?
     /// The outline sidebar's model, told when the editor scrolls.
@@ -64,6 +68,8 @@ struct MarkdownEditor: NSViewRepresentable {
         let magnification = TextZoom.clamped(zoom)
         if abs(scrollView.magnification - magnification) > 0.001 { scrollView.magnification = magnification }
         textView.documentFolder = baseURL
+        textView.isLocked = isLocked
+        textView.onRefusedEdit = onRefusedEdit
         if textView.isContinuousSpellCheckingEnabled != checksSpelling {
             textView.isContinuousSpellCheckingEnabled = checksSpelling
         }
@@ -75,7 +81,7 @@ struct MarkdownEditor: NSViewRepresentable {
         }
         if textView.theme.name != theme.name || context.coordinator.baseURL != baseURL
             || context.coordinator.joinsHardWrappedLines != joinsHardWrappedLines
-            || context.coordinator.showsSource != showsSource {
+            || context.coordinator.showsSource != showsSource || context.coordinator.isLocked != isLocked {
             context.coordinator.restyle()
         }
     }
@@ -89,10 +95,11 @@ struct MarkdownEditor: NSViewRepresentable {
         private var pendingEdit: (range: NSRange, delta: Int)?
         private var scheduledRestyle: DispatchWorkItem?
 
-        /// The base URL, reflow setting, and view the text was last styled with.
+        /// The base URL, reflow setting, view, and lock the text was last styled with.
         private(set) var baseURL: URL?
         private(set) var joinsHardWrappedLines = false
         private(set) var showsSource = false
+        private(set) var isLocked = false
         private var imageObserver: NSObjectProtocol?
         private var scrollObserver: NSObjectProtocol?
 
@@ -179,7 +186,7 @@ struct MarkdownEditor: NSViewRepresentable {
 
         // MARK: Full restyle
 
-        /// Restyles the whole document: on open, and when the theme, folder, width, or view changes.
+        /// Restyles the whole document: on open, and when the theme, folder, width, view, or lock changes.
         func restyle() {
             scheduledRestyle?.cancel()
             guard let textView, let storage = textView.textStorage else { return }
@@ -189,6 +196,7 @@ struct MarkdownEditor: NSViewRepresentable {
             baseURL = parent.baseURL
             joinsHardWrappedLines = parent.joinsHardWrappedLines
             showsSource = parent.showsSource
+            isLocked = parent.isLocked
             if showsSource { textView.typingAttributes = SourceStyler.attributes(parent.theme) }
             pendingEdit = nil
             let caret = textView.selectedRange().location
@@ -197,7 +205,8 @@ struct MarkdownEditor: NSViewRepresentable {
             let padding = textView.textContainer?.lineFragmentPadding ?? 0
             let width = (textView.textContainer?.size.width ?? 760) - 2 * padding
             let settings = LiveStyler.Settings(theme: parent.theme, baseURL: baseURL, availableWidth: max(200, width),
-                                               joinsHardWrappedLines: joinsHardWrappedLines, showsSource: showsSource)
+                                               joinsHardWrappedLines: joinsHardWrappedLines, showsSource: showsSource,
+                                               isLocked: isLocked)
             let styler = liveStyler ?? LiveStyler(storage: storage, settings: settings)
             liveStyler = styler
             textView.topLevelBlocks = { [weak styler] in styler?.blocks ?? [] }

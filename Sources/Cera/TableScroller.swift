@@ -198,8 +198,9 @@ extension MarkdownTextView {
         }
     }
 
+    /// Whether the selection is in `table`, which then shows as text to edit; never while editing is locked.
     private func selectionTouches(_ table: NSRange) -> Bool {
-        selectedRanges.contains { value in
+        !isLocked && selectedRanges.contains { value in
             let selection = value.rangeValue
             return selection.length == 0
                 ? NSLocationInRange(selection.location, table)
@@ -269,9 +270,9 @@ extension MarkdownTextView {
     }
 
     /// A click on a scrolled table: ⌘-click opens a link, a plain click puts the insertion
-    /// point at `index`, which shows that row as text for editing.
+    /// point at `index`, which shows that row as text for editing. While editing is locked, any click opens a link.
     func clickTable(at index: Int, with event: NSEvent) {
-        if event.modifierFlags.contains(.command), let storage = textStorage, index < storage.length,
+        if event.modifierFlags.contains(.command) || isLocked, let storage = textStorage, index < storage.length,
            let url = storage.attribute(.linkTarget, at: index, effectiveRange: nil) as? URL {
             followLink(url)
             return

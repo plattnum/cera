@@ -87,6 +87,10 @@ extension MarkdownTextView {
     /// Typing ``` at the start of a new block opens the language list; typing a name keeps it
     /// current, until nothing matches.
     override func insertText(_ string: Any, replacementRange: NSRange) {
+        guard !isLocked else {
+            refuseEdit() // See LockEditing.swift.
+            return
+        }
         super.insertText(string, replacementRange: replacementRange)
         guard !isOfferingLanguages, let range = fenceLanguageRange() else { return }
         let line = (self.string as NSString).lineRange(for: range).location

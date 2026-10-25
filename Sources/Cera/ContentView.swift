@@ -21,6 +21,12 @@ struct ContentView: View {
     @State private var showsSource = UserDefaults.standard.bool(forKey: "showsSource")
     /// Whether this window shows the status bar; shown at first, then new windows start as the last one was left.
     @State private var showsStatusBar = UserDefaults.standard.object(forKey: "showsStatusBar") as? Bool ?? true
+    /// Whether this window's editing is locked (see LockEditing.swift). New windows start editable, unless the
+    /// file can't be written or `cera -r` opened it.
+    @State private var isLocked = false
+    /// Counts typing refused while locked; each one shows the locked notice for a moment.
+    @State private var refusedEdits = 0
+    @State private var showsLockedNotice = false
 
     var body: some View {
         let theme = themeChoice.theme
@@ -32,12 +38,18 @@ struct ContentView: View {
                 MarkdownEditor(text: $document.text, theme: theme,
                                baseURL: fileURL?.deletingLastPathComponent(), checksSpelling: checksSpelling,
                                joinsHardWrappedLines: joinsHardWrappedLines, showsSource: showsSource,
+                               isLocked: isLocked, onRefusedEdit: { refusedEdits += 1 },
                                undoManager: undoManager, outline: outline, status: status, zoom: zoom)
                     .frame(minWidth: showsOutline ? 360 : 520, minHeight: 360)
                     .ignoresSafeArea(.container, edges: .top)
                     .overlay(alignment: .top) {
                         if diskSync.changedUnderEdits {
                             DiskChangeBanner(theme: theme, keepMine: diskSync.keepMine, loadFromDisk: diskSync.loadFromDisk)
+                        }
+                    }
+                    .overlay(alignment: .bottom) {
+                        if showsLockedNotice {
+                            LockedNotice(theme: theme)
                         }
                     }
                 if showsStatusBar {
@@ -47,8 +59,26 @@ struct ContentView: View {
         }
         .background(Color(nsColor: theme.background))
         .toolbarBackground(Color(nsColor: theme.background), for: .windowToolbar)
+        .background(LockTitlebarButton(isLocked: $isLocked, theme: theme))
         .preferredColorScheme(theme.isDark ? .dark : .light)
-        .onChange(of: fileURL, initial: true) { diskSync.watch(fileURL, for: document) }
+        .onChange(of: fileURL, initial: true) {
+            diskSync.watch(fileURL, for: document)
+            if LockRequests.take(fileURL) || fileURL.map({ !FileManager.default.isWritableFile(atPath: $0.path) }) == true {
+                isLocked = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: LockRequests.didRequest)) { _ in
+            if LockRequests.take(fileURL) { isLocked = true }
+        }
+        .onChange(of: isLocked) {
+            if !isLocked { showsLockedNotice = false }
+        }
+        .task(id: refusedEdits) {
+            guard refusedEdits > 0 else { return }
+            showsLockedNotice = true
+            try? await Task.sleep(for: .seconds(1.5))
+            if !Task.isCancelled { showsLockedNotice = false }
+        }
         // Revert hands the window a new document object for the same file.
         .onChange(of: ObjectIdentifier(document)) { diskSync.watch(fileURL, for: document) }
         .onDisappear { diskSync.stop() }
@@ -70,6 +100,7 @@ struct ContentView: View {
         .focusedSceneValue(\.showsOutline, $showsOutline)
         .focusedSceneValue(\.showsSource, $showsSource)
         .focusedSceneValue(\.showsStatusBar, $showsStatusBar)
+        .focusedSceneValue(\.isLocked, $isLocked)
     }
 }
 
@@ -101,6 +132,16 @@ extension FocusedValues {
     }
 
     private struct ShowsStatusBarKey: FocusedValueKey {
+        typealias Value = Binding<Bool>
+    }
+
+    /// Whether the focused window's editing is locked, for the View and Format menus.
+    var isLocked: Binding<Bool>? {
+        get { self[IsLockedKey.self] }
+        set { self[IsLockedKey.self] = newValue }
+    }
+
+    private struct IsLockedKey: FocusedValueKey {
         typealias Value = Binding<Bool>
     }
 }

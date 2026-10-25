@@ -83,7 +83,8 @@ Then open Cera from Spotlight, Launchpad, or Finder, and use **Open With ▸ Cer
 `cera notes.md` opens a file in Cera from the terminal (`cera a.md b.md` opens each in its
 own window); a file that doesn't exist yet is created empty. `cera photo.png` opens an image
 on its own (PNG, JPEG, GIF, HEIC, WebP, TIFF, or BMP), shown through a throwaway Markdown file
-in `$TMPDIR`, so it's a quick image viewer from the terminal. Homebrew installs the command for you. For a source install, link it onto
+in `$TMPDIR`, so it's a quick image viewer from the terminal. `cera -r notes.md` opens files with editing
+locked, to read them (it never creates a file). Homebrew installs the command for you. For a source install, link it onto
 your PATH once:
 
 ```sh
@@ -146,6 +147,7 @@ xattr -dr com.apple.quarantine Cera.app
 
 - Live rendering, parsed with Apple's [swift-markdown](https://github.com/swiftlang/swift-markdown) (CommonMark plus GitHub tables, task lists, and strikethrough): headings (`#` and underlined), bold, italic, strikethrough, inline code, fenced and indented code blocks, links, autolinks, nested quotes, nested bullet and numbered lists, task checkboxes, horizontal rules, tables (with column alignment), and images.
 - View ▸ Show Markdown Source (⌘/) shows the file as plain Markdown, every marker visible in the code font with the syntax colored, and ⌘/ again goes back to the rendered view. Only the view changes: the text, undo, and the cursor stay as they are. Each window keeps its own view; new windows start as the last one was left.
+- View ▸ Lock Editing (⌥⌘L), or the lock at the right of the title bar, makes a window a viewer: every line stays rendered, a plain click opens a link, and typing, pasting, and the Format menu do nothing (a note says how to unlock). Text can still be selected, copied, and searched, and task boxes still tick. It's per window and off in new windows; a file you can't write to opens locked, and so does `cera -r`. When the file changes on disk, a locked window follows it like any other, which makes it a live view of a file another tool is writing.
 - A table too wide for the column scrolls sideways under its own scroll bar, so every column can be read. Scrolling up and down over it still scrolls the page; click a cell to edit its row.
 - Images on their own line are drawn in place, scaled to fit. Local paths are resolved relative to the document; web images load in the background.
 - Size an image with Obsidian's pipe syntax: `![photo|300](photo.png)` shows it 300 points wide, keeping its shape, and `![photo|300x200](photo.png)` fits it inside that box. A size can enlarge a small image but never goes past the column width. Right-click an image's line for Image Size ▸ Small (300), Medium (500), Large (700), or Original Size, which writes the size into the Markdown for you.

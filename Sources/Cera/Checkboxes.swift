@@ -31,7 +31,8 @@ extension MarkdownTextView {
         return marker
     }
 
-    /// Checks or unchecks the box under a point in view coordinates. Returns whether there was one.
+    /// Checks or unchecks the box under a point in view coordinates, even while editing is locked. Returns whether
+    /// there was one.
     /// The selection stays where it is, so the line stays rendered and the box flips in place.
     @discardableResult
     func toggleCheckbox(at point: NSPoint) -> Bool {
@@ -42,6 +43,10 @@ extension MarkdownTextView {
         let box = NSRange(location: lineRange.location + state.location, length: 1)
         let replacement = text.substring(with: box) == " " ? "x" : " "
         let selection = selectedRanges
+        // Boxes still tick while editing is locked: the text is editable for this one change.
+        let editable = isEditable
+        isEditable = true
+        defer { isEditable = editable }
         guard shouldChangeText(in: box, replacementString: replacement) else { return false }
         replaceCharacters(in: box, with: replacement)
         didChangeText()

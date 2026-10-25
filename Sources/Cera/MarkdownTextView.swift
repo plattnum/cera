@@ -62,7 +62,7 @@ final class MarkdownTextView: NSTextView {
             formatBar?.isHidden = true // Wait until the mouse is released.
             return
         }
-        if selectedRange().length > 0, formatBar == nil {
+        if selectedRange().length > 0, formatBar == nil, !isLocked {
             let bar = FormatBar(textView: self)
             bar.appearance = NSAppearance(named: theme.isDark ? .darkAqua : .aqua)
             bar.isHidden = true
@@ -78,6 +78,23 @@ final class MarkdownTextView: NSTextView {
         // Typing can move or reshape the block; the button comes back when the pointer moves.
         hideCodeCopyButton()
     }
+
+    // MARK: - Lock
+
+    /// Whether editing is locked (see LockEditing.swift): the text can be read, selected, and copied, and its task
+    /// boxes ticked, but not changed. Every line stays rendered, and a plain click opens a link.
+    var isLocked = false {
+        didSet {
+            guard isLocked != oldValue else { return }
+            isEditable = !isLocked
+            updateFormatBar()
+            // A table holding the selection keeps its scroller while locked.
+            setNeedsUpdateTableScrollers()
+        }
+    }
+
+    /// Called when typing or a key command would change the text while editing is locked.
+    var onRefusedEdit: (() -> Void)?
 
     // MARK: - Theme
 
@@ -209,7 +226,7 @@ final class MarkdownTextView: NSTextView {
     }
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
-        let files = imageFiles(on: sender.draggingPasteboard)
+        let files = isLocked ? [] : imageFiles(on: sender.draggingPasteboard)
         guard !files.isEmpty else { return super.performDragOperation(sender) }
         let index = characterIndexForInsertion(at: convert(sender.draggingLocation, from: nil))
         insertImages(files, at: index)
@@ -219,6 +236,10 @@ final class MarkdownTextView: NSTextView {
     /// Pastes image files copied in Finder, or image data such as a screenshot. A URL pasted over
     /// selected text makes a link (see PasteLink.swift), and rich text becomes Markdown (PasteRichText.swift).
     override func paste(_ sender: Any?) {
+        guard !isLocked else {
+            refuseEdit()
+            return
+        }
         let pasteboard = pastePasteboard
         let files = imageFiles(on: pasteboard)
         if !files.isEmpty {
@@ -291,8 +312,8 @@ final class MarkdownTextView: NSTextView {
 
     // MARK: - Links
 
-    /// ⌘-click opens a link; a plain click edits it like any other text. A plain click on a task's
-    /// box checks or unchecks it.
+    /// ⌘-click opens a link; a plain click edits it like any other text, or opens it while editing is locked.
+    /// A plain click on a task's box checks or unchecks it.
     override func mouseDown(with event: NSEvent) {
         let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
         if modifiers.isEmpty, toggleCheckbox(at: convert(event.locationInWindow, from: nil)) {
@@ -302,15 +323,22 @@ final class MarkdownTextView: NSTextView {
             followLink(url)
             return
         }
+        if isLocked, modifiers.isEmpty, event.clickCount == 1, let url = linkURL(at: event) {
+            // Tracks the mouse until it is released, so a drag from the link still selects text; only a click opens it.
+            super.mouseDown(with: event)
+            if selectedRange().length == 0 { followLink(url) }
+            return
+        }
         super.mouseDown(with: event)
     }
 
-    /// Shows the pointing hand over a task's box and while ⌘ is held over a link, and the copy button
-    /// over a code block.
+    /// Shows the pointing hand over a task's box and over a link while ⌘ is held or editing is locked, and the
+    /// copy button over a code block.
     override func mouseMoved(with event: NSEvent) {
         super.mouseMoved(with: event)
         let point = convert(event.locationInWindow, from: nil)
-        if event.modifierFlags.contains(.command) ? linkURL(at: event) != nil : checkboxMarker(at: point) != nil {
+        let command = event.modifierFlags.contains(.command)
+        if (command || isLocked) && linkURL(at: event) != nil || !command && checkboxMarker(at: point) != nil {
             NSCursor.pointingHand.set()
         }
         updateCodeCopyButton(at: point)
@@ -343,7 +371,7 @@ final class MarkdownTextView: NSTextView {
             menu.insertItem(open, at: 0)
             menu.insertItem(copy, at: 1)
             menu.insertItem(.separator(), at: 2)
-        } else if let sizes = imageSizeMenu(at: convert(event.locationInWindow, from: nil)) {
+        } else if !isLocked, let sizes = imageSizeMenu(at: convert(event.locationInWindow, from: nil)) {
             let item = NSMenuItem(title: "Image Size", action: nil, keyEquivalent: "")
             item.submenu = sizes
             menu.insertItem(item, at: 0)

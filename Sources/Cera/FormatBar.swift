@@ -134,10 +134,10 @@ final class FormatBar: NSVisualEffectView {
 
 extension MarkdownTextView {
     /// Shows the format bar above the selection, or below it when there is no room above.
-    /// Hides it when nothing is selected.
+    /// Hides it when nothing is selected, or while editing is locked.
     func updateFormatBar() {
         let selection = selectedRange()
-        guard selection.length > 0, window != nil,
+        guard selection.length > 0, window != nil, !isLocked,
               let layoutManager, let textContainer, let bar = formatBar
         else {
             formatBar?.isHidden = true

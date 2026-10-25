@@ -109,6 +109,34 @@ final class MarkdownTextView: NSTextView {
         }
     }
 
+    override func viewDidMoveToSuperview() {
+        super.viewDidMoveToSuperview()
+        for observer in clipViewObservers { NotificationCenter.default.removeObserver(observer) }
+        clipViewObservers = []
+        guard let clipView = superview as? NSClipView else { return }
+        clipView.postsBoundsChangedNotifications = true
+        clipView.postsFrameChangedNotifications = true
+        clipViewObservers = [NSView.boundsDidChangeNotification, NSView.frameDidChangeNotification].map { name in
+            NotificationCenter.default.addObserver(forName: name, object: clipView, queue: nil) { [weak self] _ in
+                MainActor.assumeIsolated { self?.matchClipViewWidth() }
+            }
+        }
+        matchClipViewWidth()
+    }
+
+    /// Keeps the text view as wide as its clip view's bounds. Zoom (see `TextZoom`) magnifies the scroll view,
+    /// which makes those bounds the clip view's width divided by the magnification. macOS 27 resizes the text
+    /// view to match by itself; macOS 15 leaves it at the unmagnified width, even through a window resize, so
+    /// the text wouldn't rewrap (seen on the CI runner, macOS 15.7).
+    func matchClipViewWidth() {
+        guard let clipView = superview as? NSClipView else { return }
+        let width = clipView.bounds.width
+        if abs(frame.width - width) > 0.5 { setFrameSize(NSSize(width: width, height: frame.height)) }
+    }
+
+    /// Clip view notifications for `matchClipViewWidth`.
+    private var clipViewObservers: [NSObjectProtocol] = []
+
     /// Called when the text column's width changes, so images and tables can be resized.
     var onWidthChange: (() -> Void)?
 

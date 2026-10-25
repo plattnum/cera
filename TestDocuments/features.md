@@ -27,6 +27,10 @@ makes a line break, and \*escaped\* characters stay literal.
 Underlined heading
 ------------------
 
+### A heading with `inline code`
+
+Inline code in a heading grows with the heading, like `this` in body text, and keeps its own letter spacing and letters.
+
 ## Links
 
 - Inline: [Cera on the web](https://example.com "A title")

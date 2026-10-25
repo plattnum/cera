@@ -262,10 +262,11 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
         }
 
         if theme.inlineCode.alphaComponent > 0, let container = textContainers.first {
-            let codeFont = theme.codeFont
-            let boxHeight = codeFont.ascender - codeFont.descender + 4
             storage.enumerateAttribute(.inlineCode, in: characters) { value, range, _ in
                 guard value != nil else { return }
+                // The box fits the code's own font, which is larger in a heading.
+                let codeFont = storage.attribute(.font, at: range.location, effectiveRange: nil) as? NSFont ?? theme.codeFont
+                let boxHeight = codeFont.ascender - codeFont.descender + 4
                 let glyphs = glyphRange(forCharacterRange: range, actualCharacterRange: nil)
                 enumerateEnclosingRects(forGlyphRange: glyphs, withinSelectedGlyphRange: NSRange(location: NSNotFound, length: 0),
                                         in: container) { rect, _ in

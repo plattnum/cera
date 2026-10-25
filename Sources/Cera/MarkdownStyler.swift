@@ -940,11 +940,23 @@ private final class StyleContext {
 
     // MARK: Inline
 
+    /// The code font sized for the text around it, as browsers size `code` in em: in body text it is the theme's
+    /// code font, and in a heading it grows with the heading.
+    func inlineCodeFont(at location: Int) -> NSFont {
+        guard let around = storage.attribute(.font, at: location, effectiveRange: nil) as? NSFont,
+              theme.bodyFont.pointSize > 0 else { return theme.codeFont }
+        let size = theme.codeFont.pointSize * around.pointSize / theme.bodyFont.pointSize
+        return NSFont(descriptor: theme.codeFont.fontDescriptor, size: size) ?? theme.codeFont
+    }
+
     func styleInlineCode(_ code: InlineCode) {
         guard let range = range(code), range.length > 1 else { return }
         var ticks = 0
         while ticks < range.length / 2, text.character(at: range.location + ticks) == 96 { ticks += 1 }
-        storage.addAttributes([.font: theme.codeFont, .foregroundColor: theme.codeText], range: range)
+        // Code is literal: it keeps its own spacing and letters, not a heading's kerning or capitals. The padding
+        // kerns at its ends are set later, over this.
+        storage.addAttributes([.font: inlineCodeFont(at: range.location), .foregroundColor: theme.codeText, .kern: 0], range: range)
+        storage.removeAttribute(.uppercase, range: range)
         let opening = NSRange(location: range.location, length: ticks)
         let closing = NSRange(location: NSMaxRange(range) - ticks, length: ticks)
         addMarker(opening)

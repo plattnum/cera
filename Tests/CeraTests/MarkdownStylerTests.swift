@@ -26,6 +26,34 @@ final class MarkdownStylerTests: XCTestCase {
         XCTAssertEqual(color(in: storage, at: 3), theme.headings[0].color)
     }
 
+    func testInlineCodeIsSizedForTheTextAroundIt() throws {
+        // In body text, the theme's code font; in a heading, scaled up with it, as browsers do.
+        let source = "# Logging and `[Category]` tags\n\nBody with `code` here.\n\nlast"
+        let storage = style(source, caret: (source as NSString).length)
+        let body = try XCTUnwrap(font(in: storage, at: (source as NSString).range(of: "code` here").location))
+        XCTAssertEqual(body.pointSize, theme.codeFont.pointSize)
+        XCTAssertEqual(body.familyName, theme.codeFont.familyName)
+        let heading = try XCTUnwrap(font(in: storage, at: (source as NSString).range(of: "[Category]").location))
+        XCTAssertEqual(heading.pointSize, theme.codeFont.pointSize * theme.headings[0].font.pointSize / theme.bodyFont.pointSize,
+                       accuracy: 0.01)
+        XCTAssertEqual(heading.familyName, theme.codeFont.familyName)
+    }
+
+    func testInlineCodeKeepsItsOwnSpacingAndLettersInAHeading() throws {
+        // Midnight's H1 is kerned tighter, and Grotesk's H1 is drawn in capitals; code is literal.
+        let source = "# Logging and `[Category]` tags\n\nlast"
+        let code = (source as NSString).range(of: "Category").location
+        let midnight = NSTextStorage(string: source)
+        MarkdownStyler(theme: .midnight).style(midnight, caret: (source as NSString).length)
+        XCTAssertEqual(midnight.attribute(.kern, at: (source as NSString).range(of: "Logging").location, effectiveRange: nil) as? CGFloat, -1.5,
+                       "the heading itself keeps its kerning")
+        XCTAssertEqual(midnight.attribute(.kern, at: code, effectiveRange: nil) as? CGFloat, 0)
+        let grotesk = NSTextStorage(string: source)
+        MarkdownStyler(theme: .grotesk).style(grotesk, caret: (source as NSString).length)
+        XCTAssertNotNil(grotesk.attribute(.uppercase, at: (source as NSString).range(of: "Logging").location, effectiveRange: nil))
+        XCTAssertNil(grotesk.attribute(.uppercase, at: code, effectiveRange: nil))
+    }
+
     func testMarkersHiddenOnInactiveLine() {
         // The caret is on the last line, so the bold markers on line one must be hidden.
         let storage = style("a **b** c\n\nlast", caret: 15)

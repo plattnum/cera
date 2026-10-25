@@ -2,6 +2,17 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.8 (2026-10-25)
+
+- **Paste rich text as Markdown.** Copy from a web page, Google Docs, Slack, or an email and paste: headings,
+  bold, italic, strikethrough, code and code blocks, links, images, lists (nested, numbered, and checklists),
+  quotes, and tables come in as Markdown instead of plain text. Colors and fonts are dropped, and characters
+  like `*` and `#` in the copied text stay text. A copy from a code editor or Terminal, and anything pasted
+  into code, still pastes as plain text, and Paste and Match Style (⇧⌘V) always does.
+- **Status bar.** A quiet bar under the text shows the line and column of the cursor (`Ln 12, Col 5`) and the
+  word count; with a selection, the selected characters and `9 of 1,234 words`. Words are the ones you read:
+  front matter, link addresses, and Markdown symbols aren't counted. View ▸ Hide Status Bar hides it.
+
 ## 0.6.7 (2026-10-25)
 
 - **Zoom.** View ▸ Zoom In (⌘=), Zoom Out (⌘−), and Actual Size (⌘0) make the document larger or smaller, as in

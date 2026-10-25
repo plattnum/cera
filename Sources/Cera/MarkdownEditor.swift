@@ -15,6 +15,8 @@ struct MarkdownEditor: NSViewRepresentable {
     var undoManager: UndoManager?
     /// The outline sidebar's model, told when the editor scrolls.
     var outline: OutlineModel?
+    /// How much the document is magnified (see `TextZoom`); 1 is actual size.
+    var zoom: Double = 1
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -44,6 +46,7 @@ struct MarkdownEditor: NSViewRepresentable {
         outline?.textView = textView
         context.coordinator.observeScrolling(of: scrollView)
 
+        scrollView.magnification = TextZoom.clamped(zoom)
         textView.string = text
         context.coordinator.restyle()
         return scrollView
@@ -53,6 +56,9 @@ struct MarkdownEditor: NSViewRepresentable {
         guard let textView = scrollView.documentView as? MarkdownTextView else { return }
         context.coordinator.parent = self
         outline?.textView = textView
+        // The text view's width changes with it, which keeps the reading position and rewraps, as a resize does.
+        let magnification = TextZoom.clamped(zoom)
+        if abs(scrollView.magnification - magnification) > 0.001 { scrollView.magnification = magnification }
         textView.documentFolder = baseURL
         if textView.isContinuousSpellCheckingEnabled != checksSpelling {
             textView.isContinuousSpellCheckingEnabled = checksSpelling

@@ -31,6 +31,7 @@ struct CeraCommands: Commands {
     @AppStorage("joinsHardWrappedLines") private var joinsHardWrappedLines = false
     @FocusedBinding(\.showsOutline) private var showsOutline
     @FocusedBinding(\.showsSource) private var showsSource
+    @AppStorage(TextZoom.key) private var zoom = 1.0
 
     var body: some Commands {
         CommandGroup(after: .newItem) {
@@ -60,6 +61,17 @@ struct CeraCommands: Commands {
                 .keyboardShortcut("/")
                 .disabled(showsSource == nil)
             Toggle("Flow Hard-Wrapped Paragraphs", isOn: $joinsHardWrappedLines)
+            Divider()
+            // The keys of browsers and other Markdown editors.
+            Button("Zoom In") { zoom = TextZoom.zoomedIn(from: TextZoom.clamped(zoom)) ?? zoom }
+                .keyboardShortcut("=")
+                .disabled(TextZoom.zoomedIn(from: TextZoom.clamped(zoom)) == nil)
+            Button("Zoom Out") { zoom = TextZoom.zoomedOut(from: TextZoom.clamped(zoom)) ?? zoom }
+                .keyboardShortcut("-")
+                .disabled(TextZoom.zoomedOut(from: TextZoom.clamped(zoom)) == nil)
+            Button("Actual Size") { zoom = 1 }
+                .keyboardShortcut("0")
+                .disabled(abs(zoom - 1) < 0.001)
         }
 
         CommandMenu("Themes") {
@@ -90,7 +102,7 @@ struct CeraCommands: Commands {
 
             Menu("Heading") {
                 Button("Paragraph") { send(#selector(MarkdownTextView.paragraph(_:))) }
-                    .keyboardShortcut("0")
+                    .keyboardShortcut("0", modifiers: [.command, .control])
                 Button("Heading 1") { send(#selector(MarkdownTextView.heading1(_:))) }
                     .keyboardShortcut("1")
                 Button("Heading 2") { send(#selector(MarkdownTextView.heading2(_:))) }
@@ -105,9 +117,9 @@ struct CeraCommands: Commands {
                     .keyboardShortcut("6")
                 Divider()
                 Button("Make Heading Larger") { send(#selector(MarkdownTextView.makeHeadingLarger(_:))) }
-                    .keyboardShortcut("=")
+                    .keyboardShortcut("=", modifiers: [.command, .control])
                 Button("Make Heading Smaller") { send(#selector(MarkdownTextView.makeHeadingSmaller(_:))) }
-                    .keyboardShortcut("-")
+                    .keyboardShortcut("-", modifiers: [.command, .control])
             }
 
             Menu("List") {

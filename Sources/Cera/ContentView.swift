@@ -9,6 +9,7 @@ struct ContentView: View {
     @AppStorage("theme") private var themeChoice: ThemeChoice = .midnight
     @AppStorage("checksSpelling") private var checksSpelling = false
     @AppStorage("joinsHardWrappedLines") private var joinsHardWrappedLines = false
+    @AppStorage(TextZoom.key) private var zoom = 1.0
     /// Follows changes other apps and agents make to the file.
     @StateObject private var diskSync = DiskSync()
     @StateObject private var outline = OutlineModel()
@@ -27,7 +28,7 @@ struct ContentView: View {
             MarkdownEditor(text: $document.text, theme: theme,
                            baseURL: fileURL?.deletingLastPathComponent(), checksSpelling: checksSpelling,
                            joinsHardWrappedLines: joinsHardWrappedLines, showsSource: showsSource,
-                           undoManager: undoManager, outline: outline)
+                           undoManager: undoManager, outline: outline, zoom: zoom)
                 .frame(minWidth: showsOutline ? 360 : 520, minHeight: 360)
                 .ignoresSafeArea(.container, edges: .top)
                 .overlay(alignment: .top) {

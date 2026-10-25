@@ -2,6 +2,17 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.7 (2026-10-25)
+
+- **Zoom.** View ▸ Zoom In (⌘=), Zoom Out (⌘−), and Actual Size (⌘0) make the document larger or smaller, as in
+  a browser: text, spacing, checkboxes, tables, and images together. The level is the same in every window and
+  is remembered.
+- **Heading shortcuts moved.** To match common Markdown editors, ⌘=, ⌘−, and ⌘0 are now zoom. Format ▸ Heading ▸
+  Paragraph is ⌃⌘0, Make Heading Larger ⌃⌘=, and Make Heading Smaller ⌃⌘−. Heading 1–6 stay on ⌘1–⌘6.
+- **Fixed: inline code in headings.** Code in a heading was drawn at the body text size, small next to the
+  heading. It now grows with the heading, and keeps its own letter spacing and letters in themes whose headings
+  are spaced tighter or set in capitals.
+
 ## 0.6.6 (2026-10-25)
 
 - **Paste a URL over selected text to make a link.** Select some text and paste a web link or `mailto:` address,

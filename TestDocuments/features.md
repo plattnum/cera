@@ -114,7 +114,6 @@ An image inside a sentence shows its alt text: ![inline picture](../Design/icons
 
 ## A hard-wrapped paragraph
 
-This [paragraph](https://) is [hard](https://www.google.com/search?q=razer+blackwidows+v4+pro+mac+compatibility&oq=razer+blackwidows+v4+pro+mac+compatibility&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIJCAEQIRgKGKAB0gEIODUwOGowajSoAgCwAgE&sourceid=chrome&source=chrome.ob&ie=UTF-8)-wrapped, the way many plain-text files are written,
+This paragraph is hard-wrapped, the way many plain-text files are written,
 with a line break every seventy characters or so. Cera keeps these line
-breaks, like [Typora](https://www.rtings.com/keyboard/reviews/razer/blackwidow-v4-pro); turn on View ▸ Flow Hard-Wrapped  tested
- to join them.
+breaks, like Typora; turn on View ▸ Flow Hard-Wrapped Paragraphs to join them.

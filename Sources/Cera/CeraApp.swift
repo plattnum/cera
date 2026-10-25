@@ -31,6 +31,7 @@ struct CeraCommands: Commands {
     @AppStorage("joinsHardWrappedLines") private var joinsHardWrappedLines = false
     @FocusedBinding(\.showsOutline) private var showsOutline
     @FocusedBinding(\.showsSource) private var showsSource
+    @FocusedBinding(\.showsStatusBar) private var showsStatusBar
     @AppStorage(TextZoom.key) private var zoom = 1.0
 
     var body: some Commands {
@@ -54,6 +55,8 @@ struct CeraCommands: Commands {
             Button(showsOutline == true ? "Hide Outline" : "Show Outline") { showsOutline?.toggle() }
                 .keyboardShortcut("s", modifiers: [.command, .control])
                 .disabled(showsOutline == nil)
+            Button(showsStatusBar == true ? "Hide Status Bar" : "Show Status Bar") { showsStatusBar?.toggle() }
+                .disabled(showsStatusBar == nil)
         }
 
         CommandGroup(after: .toolbar) {

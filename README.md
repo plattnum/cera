@@ -154,6 +154,7 @@ xattr -dr com.apple.quarantine Cera.app
 - Mermaid diagrams: a ```` ```mermaid ```` code block shows as the diagram, drawn natively by [MermaidKit](https://github.com/2389-research/MermaidKit) (no web view or JavaScript) in the theme's colors, with labels the size of the body text, and scaled down when too wide for the column. Put the cursor in the block to edit its code; move away and the diagram comes back. A block MermaidKit can't draw, such as one with a syntax error, stays a code block. Flowcharts, sequence, class, state, ER, Gantt, pie, mindmap, journey, and more are supported; Mermaid's `classDef` and `style` colors are ignored.
 - Hover over a code block and a copy button appears in its corner; click it to copy just the code, without the fences (or the quote and list markers of a nested block). Right-click a code block for Copy Code.
 - View ▸ Zoom In (⌘=), Zoom Out (⌘−), and Actual Size (⌘0) make the document larger or smaller, as in a browser: text, spacing, checkboxes, tables, and images together. The level is the same in every window and is remembered.
+- A status bar under the text shows the line and column of the cursor (`Ln 12, Col 5`) and the word count; with a selection, the selected characters and `9 of 1,234 words`. Words are the ones you read: front matter, link addresses, and Markdown symbols aren't counted. View ▸ Hide Status Bar hides it.
 - View ▸ Show Outline (⌃⌘S) opens a sidebar listing the document's headings. Click one to jump to it; the section you're reading stays highlighted as you scroll, and the list updates as you type or when the file changes on disk. New windows open with the outline shown or hidden as you last left it.
 - Follows changes made to the open file on disk, such as an agent editing it: the window shows the new text within a moment, keeping the caret and the text in view in place. If the window has unsaved edits, a banner asks first: Keep Mine saves your version over the file, Load from Disk discards your edits. Saving over a changed file still brings up the system's "changed by another application" alert.
 - Click a task's box to check or uncheck it; the click edits the `[ ]` in the file and ⌘Z undoes it. Format ▸ List ▸ Toggle Checked (⌘L, as in Obsidian) does the same for the selected lines, and turns a line that isn't a task into one.
@@ -186,6 +187,7 @@ xattr -dr com.apple.quarantine Cera.app
 - `Sources/Cera/MarkdownStyler.swift`: parses the document and styles each element, a region at a time
 - `Sources/Cera/LiveStyler.swift`: keeps styling current while editing, restyling only what changed
 - `Sources/Cera/FormatCommands.swift`, `FormatBar.swift`, `InlineMarkup.swift`: heading, list, quote, insert, and clear-formatting commands, and the floating format bar
+- `Sources/Cera/StatusBar.swift`: the status bar, with the line, column, and word count
 - `Sources/Cera/TextZoom.swift`: the zoom levels for View ▸ Zoom In and Zoom Out
 - `Sources/Cera/HTMLMarkdown.swift`, `PasteRichText.swift`: rich text pasted from the clipboard as Markdown
 - `Sources/Cera/PasteLink.swift`: a URL pasted over selected text makes a link

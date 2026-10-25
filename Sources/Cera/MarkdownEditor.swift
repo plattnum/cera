@@ -15,6 +15,8 @@ struct MarkdownEditor: NSViewRepresentable {
     var undoManager: UndoManager?
     /// The outline sidebar's model, told when the editor scrolls.
     var outline: OutlineModel?
+    /// The status bar's model, told when the selection changes.
+    var status: StatusModel?
     /// How much the document is magnified (see `TextZoom`); 1 is actual size.
     var zoom: Double = 1
 
@@ -44,6 +46,7 @@ struct MarkdownEditor: NSViewRepresentable {
 
         context.coordinator.textView = textView
         outline?.textView = textView
+        status?.textView = textView
         context.coordinator.observeScrolling(of: scrollView)
 
         scrollView.magnification = TextZoom.clamped(zoom)
@@ -56,6 +59,7 @@ struct MarkdownEditor: NSViewRepresentable {
         guard let textView = scrollView.documentView as? MarkdownTextView else { return }
         context.coordinator.parent = self
         outline?.textView = textView
+        status?.textView = textView
         // The text view's width changes with it, which keeps the reading position and rewraps, as a resize does.
         let magnification = TextZoom.clamped(zoom)
         if abs(scrollView.magnification - magnification) > 0.001 { scrollView.magnification = magnification }
@@ -161,6 +165,7 @@ struct MarkdownEditor: NSViewRepresentable {
 
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let textView else { return }
+            parent.status?.selectionChanged()
             // Only the lines the cursor left and entered need restyling: that is where markers show or hide.
             let caret = textView.selectedRange().location
             let newLine = lineStart(at: caret)

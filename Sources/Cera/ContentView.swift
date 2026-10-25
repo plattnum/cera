@@ -13,11 +13,14 @@ struct ContentView: View {
     /// Follows changes other apps and agents make to the file.
     @StateObject private var diskSync = DiskSync()
     @StateObject private var outline = OutlineModel()
+    @StateObject private var status = StatusModel()
     /// Whether this window shows the outline; new windows start as the last one was left.
     @State private var showsOutline = UserDefaults.standard.bool(forKey: "showsOutline")
     /// Whether this window shows the Markdown source instead of rendering it; new windows
     /// start as the last one was left.
     @State private var showsSource = UserDefaults.standard.bool(forKey: "showsSource")
+    /// Whether this window shows the status bar; shown at first, then new windows start as the last one was left.
+    @State private var showsStatusBar = UserDefaults.standard.object(forKey: "showsStatusBar") as? Bool ?? true
 
     var body: some View {
         let theme = themeChoice.theme
@@ -25,17 +28,22 @@ struct ContentView: View {
             if showsOutline {
                 OutlineSidebar(model: outline, theme: theme)
             }
-            MarkdownEditor(text: $document.text, theme: theme,
-                           baseURL: fileURL?.deletingLastPathComponent(), checksSpelling: checksSpelling,
-                           joinsHardWrappedLines: joinsHardWrappedLines, showsSource: showsSource,
-                           undoManager: undoManager, outline: outline, zoom: zoom)
-                .frame(minWidth: showsOutline ? 360 : 520, minHeight: 360)
-                .ignoresSafeArea(.container, edges: .top)
-                .overlay(alignment: .top) {
-                    if diskSync.changedUnderEdits {
-                        DiskChangeBanner(theme: theme, keepMine: diskSync.keepMine, loadFromDisk: diskSync.loadFromDisk)
+            VStack(spacing: 0) {
+                MarkdownEditor(text: $document.text, theme: theme,
+                               baseURL: fileURL?.deletingLastPathComponent(), checksSpelling: checksSpelling,
+                               joinsHardWrappedLines: joinsHardWrappedLines, showsSource: showsSource,
+                               undoManager: undoManager, outline: outline, status: status, zoom: zoom)
+                    .frame(minWidth: showsOutline ? 360 : 520, minHeight: 360)
+                    .ignoresSafeArea(.container, edges: .top)
+                    .overlay(alignment: .top) {
+                        if diskSync.changedUnderEdits {
+                            DiskChangeBanner(theme: theme, keepMine: diskSync.keepMine, loadFromDisk: diskSync.loadFromDisk)
+                        }
                     }
+                if showsStatusBar {
+                    StatusBar(model: status, theme: theme)
                 }
+            }
         }
         .background(Color(nsColor: theme.background))
         .toolbarBackground(Color(nsColor: theme.background), for: .windowToolbar)
@@ -46,6 +54,7 @@ struct ContentView: View {
         .onDisappear { diskSync.stop() }
         .onChange(of: document.text) {
             if showsOutline { outline.update(text: document.text) }
+            status.textChanged()
         }
         .onChange(of: showsOutline, initial: true) {
             UserDefaults.standard.set(showsOutline, forKey: "showsOutline")
@@ -54,8 +63,13 @@ struct ContentView: View {
         .onChange(of: showsSource) {
             UserDefaults.standard.set(showsSource, forKey: "showsSource")
         }
+        .onChange(of: showsStatusBar, initial: true) {
+            UserDefaults.standard.set(showsStatusBar, forKey: "showsStatusBar")
+            status.isShown = showsStatusBar
+        }
         .focusedSceneValue(\.showsOutline, $showsOutline)
         .focusedSceneValue(\.showsSource, $showsSource)
+        .focusedSceneValue(\.showsStatusBar, $showsStatusBar)
     }
 }
 
@@ -77,6 +91,16 @@ extension FocusedValues {
     }
 
     private struct ShowsSourceKey: FocusedValueKey {
+        typealias Value = Binding<Bool>
+    }
+
+    /// Whether the focused window shows the status bar, for the View menu.
+    var showsStatusBar: Binding<Bool>? {
+        get { self[ShowsStatusBarKey.self] }
+        set { self[ShowsStatusBarKey.self] = newValue }
+    }
+
+    private struct ShowsStatusBarKey: FocusedValueKey {
         typealias Value = Binding<Bool>
     }
 }

@@ -2,6 +2,14 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.9 (2026-10-25)
+
+- **Lock Editing.** View ▸ Lock Editing (⌥⌘L), or the lock at the right of the title bar, makes a window a
+  viewer: every line stays rendered, even the cursor's, and a plain click opens a link. Typing, pasting, image
+  drops, and the Format menu do nothing, and a note says how to unlock. Text can still be selected, copied, and
+  searched, and task boxes still tick. It's per window and off in new windows. A file you can't write to opens
+  locked, and `cera -r notes.md` opens a file locked from the terminal.
+
 ## 0.6.8 (2026-10-25)
 
 - **Paste rich text as Markdown.** Copy from a web page, Google Docs, Slack, or an email and paste: headings,

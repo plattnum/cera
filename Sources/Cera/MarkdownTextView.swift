@@ -217,7 +217,7 @@ final class MarkdownTextView: NSTextView {
     }
 
     /// Pastes image files copied in Finder, or image data such as a screenshot. A URL pasted over
-    /// selected text makes a link (see PasteLink.swift).
+    /// selected text makes a link (see PasteLink.swift), and rich text becomes Markdown (PasteRichText.swift).
     override func paste(_ sender: Any?) {
         let pasteboard = pastePasteboard
         let files = imageFiles(on: pasteboard)
@@ -235,6 +235,7 @@ final class MarkdownTextView: NSTextView {
             return
         }
         if let pasted = pasteboard.string(forType: .string), pasteLink(pasted) { return }
+        if pasteRichText(from: pasteboard) { return }
         super.paste(sender)
     }
 

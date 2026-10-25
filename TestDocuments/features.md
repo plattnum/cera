@@ -39,7 +39,7 @@ Inline code in a heading grows with the heading, like `this` in body text, and k
 - Bare address: https://github.com
 - Relative file: [the syntax guide](markdown-syntax-guide.md)
 
-⌘-click a link to open it. To make one, select some text and paste a URL over it: the text becomes `[text](url)`. Paste and Match Style (⇧⌘V) pastes the URL as it is.
+⌘-click a link to open it. To make one, select some text and paste a URL over it: the text becomes `[text](url)`. Paste and Match Style (⇧⌘V) pastes the URL as it is. Copy from a web page, Google Docs, or Slack and paste: headings, emphasis, links, lists, code, quotes, and tables come in as Markdown; ⇧⌘V pastes the plain text.
 
 [spec]: https://spec.commonmark.org
 

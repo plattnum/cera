@@ -154,6 +154,12 @@ final class FormatCommandsTests: XCTestCase {
         XCTAssertEqual(clear("go <https://a.b> ok", selecting: "a.b").string, "go https://a.b ok")
     }
 
+    func testClearFormattingOnALineWithoutItsQuoteMarker() {
+        // The second line belongs to the quote without starting with `>`.
+        XCTAssertEqual(clear("> A quote\nthat has **bold** here", selecting: "bold").string, "> A quote\nthat has bold here")
+        XCTAssertEqual(clear("- An item\nwith `code` here", selecting: "code").string, "- An item\nwith code here")
+    }
+
     func testClearFormattingNestedAndPartialSpans() {
         XCTAssertEqual(clear("A ***both*** B", selecting: "both").string, "A both B")
         XCTAssertEqual(clear("**bold *and it* end**", selecting: "and").string, "bold and it end")

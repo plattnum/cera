@@ -46,7 +46,7 @@ extension MarkdownTextView {
         let selection = NSRange(location: range.location - region.location, length: range.length)
 
         func touches(_ markup: Markup) -> Bool {
-            if matches(markup), let span = map.range(markup.range) {
+            if matches(markup), let span = map.range(of: markup) {
                 let inside = selection.length > 0 ? NSIntersectionRange(span, selection).length > 0
                     : span.location < selection.location && selection.location < NSMaxRange(span)
                 if inside { return true }

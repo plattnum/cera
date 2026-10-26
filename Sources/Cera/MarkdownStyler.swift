@@ -511,7 +511,7 @@ private final class StyleContext {
     /// The node's text range, without trailing line breaks: whether the parser
     /// includes the final line break depends on what follows, which must not matter.
     func range(_ markup: Markup) -> NSRange? {
-        guard var range = map.range(markup.range), NSMaxRange(range) <= text.length else { return nil }
+        guard var range = map.range(of: markup), NSMaxRange(range) <= text.length else { return nil }
         // Keep every node inside its top-level block: the parser can report an end
         // position in the next block, which would style text that isn't part of the node.
         var root = markup

@@ -66,6 +66,36 @@ struct SourceMap {
         return NSRange(location: start, length: end - start)
     }
 
+    /// The text range of a node. Use this, not `range(_:)`, for inline nodes (emphasis, code, links, text):
+    /// on a paragraph's later lines the parser gives their columns as if each line's text started where the
+    /// paragraph's first line does. A line that leaves out the quote's `>` or the list item's indentation
+    /// (a lazy continuation line), or has more of it, would put them in the wrong place.
+    func range(of markup: Markup) -> NSRange? {
+        guard let range = markup.range else { return nil }
+        guard markup is Markdown.InlineMarkup else { return self.range(range) }
+        var block = markup.parent
+        while let current = block, current is Markdown.InlineMarkup { block = current.parent }
+        guard let blockStart = block?.range?.lowerBound else { return self.range(range) }
+        let start = offset(range.lowerBound, inBlockStartingAt: blockStart)
+        let end = max(start, offset(range.upperBound, inBlockStartingAt: blockStart))
+        return NSRange(location: start, length: end - start)
+    }
+
+    /// Quote markers and indentation before a paragraph line's text.
+    private static let linePrefixRegex = try! NSRegularExpression(pattern: "^[ \\t]*(?:>[ \\t]*)*")
+
+    /// `location` in a block that starts at `blockStart`, measured from where its line's text starts.
+    private func offset(_ location: SourceLocation, inBlockStartingAt blockStart: SourceLocation) -> Int {
+        let line = location.line - 1
+        guard location.line > blockStart.line, line < lineStarts.count else { return offset(location) }
+        let lineText = text.substring(with: contentRange(ofLine: line))
+        let prefix = Self.linePrefixRegex.firstMatch(in: lineText, range: NSRange(location: 0, length: (lineText as NSString).length))?
+            .range.length ?? 0
+        // The prefix is ASCII, so its length in UTF-16 is its length in UTF-8 bytes, as columns count.
+        let column = prefix + 1 + location.column - blockStart.column
+        return offset(SourceLocation(line: location.line, column: column, source: nil))
+    }
+
     /// The line's characters, without its line break.
     private func contentRange(ofLine line: Int) -> NSRange {
         let start = lineStarts[line]

@@ -9,6 +9,8 @@ Files for checking how Cera renders Markdown. Open any of them in Cera.
 - `code-languages.md`: a realistic example in each language syntax highlighting covers, for checking every color.
 - `callouts.md`: GitHub alerts (`> [!NOTE]` and the other types), their edge cases, and markers that must stay
   plain quotes or text.
+- `lazy-quote-lines.md`: quote and list lines that leave out their `>` or indentation, each next to the same
+  text written in full; both should look the same.
 - `mermaid.md`: every kind of Mermaid diagram Cera draws, nested diagrams, and blocks that stay code.
 - `markdown-syntax-guide.md`: John Gruber's Markdown syntax guide as a test page, from
   [mxstbr/markdown-test-file](https://github.com/mxstbr/markdown-test-file) (MIT License).

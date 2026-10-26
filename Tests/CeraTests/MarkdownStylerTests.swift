@@ -159,6 +159,35 @@ final class MarkdownStylerTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(row.edges.last), 760, accuracy: 0.5)
     }
 
+    func testInlineMarkupOnLinesWithoutTheirPrefixHidesItsOwnMarkers() {
+        // The second line leaves out the `> ` or indentation the first line has (or adds some); the parser
+        // counts its columns as if it hadn't.
+        let cases = ["> A quote\nthat has `code` (here) end", "> > A nested quote\nthat has `code` (here) end",
+                     "> A quote\n>that has `code` (here) end", "- A list item\nthat has `code` (here) end",
+                     "1. A numbered item\nthat has `code` (here) end", "- A list item\n    that has `code` (here) end",
+                     "A paragraph\n   that has `code` (here) end", "> [!TIP]\n> A callout\nthat has `code` (here) end",
+                     "> A quote\nthat has **bold** (here) end", "> A quote\nthat has [a link](https://example.com) (here) end",
+                     "> A quote\nthat has `code` here,\nand `more` (here) end"]
+        for source in cases {
+            let storage = style(source + "\n\nlast", caret: (source as NSString).length + 6)
+            let text = source as NSString
+            func hidden(_ index: Int) -> Bool {
+                (storage.attribute(.font, at: index, effectiveRange: nil) as? NSFont)?.pointSize == MarkdownStyler.hiddenFont.pointSize
+            }
+            // What the markup shows stays visible, and so does the text after it.
+            for word in ["code", "bold", "a link", "more"] where text.range(of: word).location != NSNotFound {
+                let at = text.range(of: word, options: .backwards).location
+                XCTAssertFalse(hidden(at), "\(word) in \(source)")
+                XCTAssertFalse(hidden(at + word.count - 1), "end of \(word) in \(source)")
+            }
+            XCTAssertFalse(hidden(text.range(of: "(here)").location), "( in \(source)")
+            // Its markers are hidden.
+            for marker in ["`", "**"] where text.range(of: marker).location != NSNotFound {
+                XCTAssertTrue(hidden(text.range(of: marker, options: .backwards).location), "\(marker) in \(source)")
+            }
+        }
+    }
+
     func testTableInsideAQuoteHasOnlyItsOwnColumns() throws {
         // The `> ` before the first pipe is the quote's marker, not a cell.
         for source in ["> | Setting | Value |\n> |---|---|\n> | Mode | Strict |\n\nlast",

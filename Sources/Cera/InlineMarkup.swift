@@ -16,7 +16,7 @@ enum InlineMarkup {
         let local = NSRange(location: selection.location - region.location, length: selection.length)
         var found: [NSRange] = []
 
-        func range(_ markup: Markup) -> NSRange? { map.range(markup.range) }
+        func range(_ markup: Markup) -> NSRange? { map.range(of: markup) }
 
         func touches(_ span: NSRange) -> Bool {
             NSIntersectionRange(span, local).length > 0

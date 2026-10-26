@@ -2,6 +2,20 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.10 (2026-10-26)
+
+- **Callouts.** A quote that starts with `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, or `[!CAUTION]`, the
+  alert syntax common in GitHub READMEs, is drawn as a shaded box in the type's color with an icon and label,
+  and the marker is hidden until you edit the line. As in common Markdown editors, more types work too (info,
+  todo, abstract, success, question, failure, danger, bug, example, quote, and their other names), as does a
+  title after the marker (`> [!TIP] Save first`). Callouts work inside lists, quotes, and other callouts, and
+  code blocks and tables stay inside the box. Folding signs (`[!NOTE]-`) are accepted, but callouts always show
+  open.
+- **Fixed: tables inside quotes.** The quote's `>` was read as an extra column, which shifted every cell.
+- **Fixed: markup on lines without their `>` or indentation.** A quote line that continues without `>`, or a list
+  item line without its indentation, hid its bold, code, or link markers in the wrong place, showing some and
+  hiding letters instead. Clear Formatting removed the wrong characters on those lines too.
+
 ## 0.6.9 (2026-10-25)
 
 - **Lock Editing.** View ▸ Lock Editing (⌥⌘L), or the lock at the right of the title bar, makes a window a

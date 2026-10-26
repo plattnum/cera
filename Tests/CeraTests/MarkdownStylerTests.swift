@@ -159,6 +159,21 @@ final class MarkdownStylerTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(row.edges.last), 760, accuracy: 0.5)
     }
 
+    func testTableInsideAQuoteHasOnlyItsOwnColumns() throws {
+        // The `> ` before the first pipe is the quote's marker, not a cell.
+        for source in ["> | Setting | Value |\n> |---|---|\n> | Mode | Strict |\n\nlast",
+                       "> [!WARNING]\n>\n> | Setting | Value |\n> |---|---|\n> | Mode | Strict |\n\nlast",
+                       "- item\n\n  > | Setting | Value |\n  > |---|---|\n  > | Mode | Strict |\n\nlast"] {
+            let storage = style(source, caret: (source as NSString).length)
+            let row = try XCTUnwrap(storage.attribute(.tableRow, at: (source as NSString).range(of: "Mode").location,
+                                                      effectiveRange: nil) as? TableRowInfo, source)
+            XCTAssertEqual(row.edges.count, 3, source)
+            XCTAssertNotEqual((storage.attribute(.font, at: (source as NSString).range(of: "Setting").location,
+                                                 effectiveRange: nil) as? NSFont)?.pointSize,
+                              MarkdownStyler.hiddenFont.pointSize, source)
+        }
+    }
+
     func testTableBlockCoversExactlyTheTablesLines() throws {
         let table = "| a | b |\n|---|---|\n| 1 | 2 |\n"
         let source = "intro\n\n" + table + "\nlast"

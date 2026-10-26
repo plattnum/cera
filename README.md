@@ -145,7 +145,7 @@ xattr -dr com.apple.quarantine Cera.app
 
 ## Features
 
-- Live rendering, parsed with Apple's [swift-markdown](https://github.com/swiftlang/swift-markdown) (CommonMark plus GitHub tables, task lists, and strikethrough): headings (`#` and underlined), bold, italic, strikethrough, inline code, fenced and indented code blocks, links, autolinks, nested quotes, nested bullet and numbered lists, task checkboxes, horizontal rules, tables (with column alignment), and images.
+- Live rendering, parsed with Apple's [swift-markdown](https://github.com/swiftlang/swift-markdown) (CommonMark plus GitHub tables, task lists, and strikethrough): headings (`#` and underlined), bold, italic, strikethrough, inline code, fenced and indented code blocks, links, autolinks, nested quotes, callouts (GitHub alerts such as `> [!NOTE]`, plus titles and more types), nested bullet and numbered lists, task checkboxes, horizontal rules, tables (with column alignment), and images.
 - View ▸ Show Markdown Source (⌘/) shows the file as plain Markdown, every marker visible in the code font with the syntax colored, and ⌘/ again goes back to the rendered view. Only the view changes: the text, undo, and the cursor stay as they are. Each window keeps its own view; new windows start as the last one was left.
 - View ▸ Lock Editing (⌥⌘L), or the lock at the right of the title bar, makes a window a viewer: every line stays rendered, a plain click opens a link, and typing, pasting, and the Format menu do nothing (a note says how to unlock). Text can still be selected, copied, and searched, and task boxes still tick. It's per window and off in new windows; a file you can't write to opens locked, and so does `cera -r`. When the file changes on disk, a locked window follows it like any other, which makes it a live view of a file another tool is writing.
 - A table too wide for the column scrolls sideways under its own scroll bar, so every column can be read. Scrolling up and down over it still scrolls the page; click a cell to edit its row.
@@ -203,7 +203,8 @@ xattr -dr com.apple.quarantine Cera.app
 - `Sources/Cera/Outline.swift`: the outline sidebar, and keeping the reading position when the text is laid out again
 - `Sources/Cera/LinkResolver.swift`: turns link destinations into openable URLs, and follows them
 - `Sources/Cera/HeadingAnchors.swift`: the `#anchor` each heading answers to
-- `Sources/Cera/MarkdownLayoutManager.swift`: draws bullets, checkboxes, code panels, quote bars, and rules
+- `Sources/Cera/MarkdownLayoutManager.swift`: draws bullets, checkboxes, code panels, quote bars, callout boxes, and rules
+- `Sources/Cera/Callouts.swift`: callout types, their markers, colors, and icons
 - `Sources/Cera/Theme.swift`: fonts, colors, and layout for each theme
 - `Sources/Cera/SyntaxHighlighter.swift`: tree-sitter syntax highlighting, and which theme color each kind of code gets
 - `Sources/Cera/CodeLanguages.swift`: the highlighted languages, their names and aliases, grammars, and queries

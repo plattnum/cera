@@ -78,6 +78,16 @@ Click a box to check or uncheck it; ⌘Z undoes it. ⌘L (Format ▸ List ▸ To
 >
 > - Even a list
 
+## Callouts
+
+A quote that starts with `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]` is a callout. `callouts.md` has every type.
+
+> [!TIP]
+> A callout with **formatting**.
+
+> [!WARNING] A callout with its own title
+> And a body.
+
 ## Code
 
 ```swift

@@ -447,6 +447,8 @@ private final class StyleContext {
         var rows: [Row]
         let alignments: [Table.ColumnAlignment?]
         let indent: CGFloat
+        /// Space kept clear at the right, inside callout boxes.
+        let rightInset: CGFloat
     }
 
     let storage: NSTextStorage
@@ -471,6 +473,12 @@ private final class StyleContext {
     var regionLength = Int.max
     /// Space added after hidden code-span backticks, applied once markers are hidden.
     private var paddingKerns: [(location: Int, amount: CGFloat)] = []
+    /// Each callout's first and last line, padded once the block gaps are set.
+    private var callouts: [(header: NSRange, last: NSRange)] = []
+    /// Starts of callout header lines, whose line break stays a line break.
+    private var calloutHeaderLines: Set<Int> = []
+    /// Where each quote that is a callout starts.
+    private var calloutQuoteStarts: Set<Int> = []
 
     private static let listMarkerRegex = try! NSRegularExpression(pattern: "([-*+]|\\d+[.)])([ \\t]+|$)(\\[[ xX]\\][ \\t]+)?")
     /// Indentation and quote markers at the start of a line.
@@ -561,6 +569,17 @@ private final class StyleContext {
             node = current.parent
         }
         return total
+    }
+
+    /// Space a block keeps clear at the right, inside the callout boxes around it, as text does (see `padCallouts`).
+    func calloutInset(for markup: Markup?) -> CGFloat {
+        var count = 0
+        var node = markup?.parent
+        while let current = node {
+            if current is BlockQuote, let start = range(current)?.location, calloutQuoteStarts.contains(start) { count += 1 }
+            node = current.parent
+        }
+        return CGFloat(count) * CalloutStyle.rightPadding
     }
 
     // MARK: Blocks
@@ -661,7 +680,7 @@ private final class StyleContext {
     func markSoftBreaks(in paragraph: Paragraph) {
         guard joinsHardWrappedLines, let range = range(paragraph), !containsActiveLine(range) else { return }
         let paragraphLines = lines(in: range)
-        for line in paragraphLines.dropLast() {
+        for line in paragraphLines.dropLast() where !calloutHeaderLines.contains(line.location) {
             let content = text.substring(with: line)
             if content.hasSuffix("  ") || content.hasSuffix("\\") { continue }
             let full = text.lineRange(for: line)
@@ -686,7 +705,7 @@ private final class StyleContext {
         else { return false }
 
         let indent = indent(for: paragraph)
-        let maxWidth = max(40, availableWidth - indent)
+        let maxWidth = max(40, availableWidth - indent - calloutInset(for: paragraph))
         var scale: CGFloat = 1
         if let (width, height) = ImageSize.requested(alt: image.plainText) {
             scale = width / picture.size.width
@@ -708,21 +727,79 @@ private final class StyleContext {
         guard let range = range(quote) else { return }
         let barX = indent(for: quote.parent) + theme.quoteBarX
         let style = MarkdownStyler.paragraph(lineHeight: theme.lineHeight, indent: indent(for: quote), alignment: theme.bodyAlignment)
+        let quoteLines = lines(in: range)
+        let callout = calloutMarker(at: range.location, firstLine: quoteLines.first)
+        // Callouts are styled outside in, so the callouts around this one are already on its first line.
+        let block = callout.map { found -> CalloutBlock in
+            let enclosing = storage.attribute(.callout, at: range.location, effectiveRange: nil) as? [CalloutBlock] ?? []
+            return CalloutBlock(kind: found.marker.kind, x: barX, depth: enclosing.count,
+                                header: quoteLines.first.map(\.location) ?? range.location)
+        }
 
-        for line in lines(in: range) {
+        for line in quoteLines {
             storage.addAttribute(.paragraphStyle, value: style, range: text.lineRange(for: line))
-            var bars = storage.attribute(.quoteBar, at: line.location, effectiveRange: nil) as? [CGFloat] ?? []
-            bars.append(barX)
-            storage.addAttribute(.quoteBar, value: bars, range: text.lineRange(for: line))
+            if let block {
+                // A callout draws a box instead of a bar.
+                var blocks = storage.attribute(.callout, at: line.location, effectiveRange: nil) as? [CalloutBlock] ?? []
+                blocks.append(block)
+                storage.addAttribute(.callout, value: blocks, range: text.lineRange(for: line))
+            } else {
+                var bars = storage.attribute(.quoteBar, at: line.location, effectiveRange: nil) as? [CGFloat] ?? []
+                bars.append(barX)
+                storage.addAttribute(.quoteBar, value: bars, range: text.lineRange(for: line))
+            }
             guard line.length > 0 else { continue }
-            storage.addAttribute(.foregroundColor, value: theme.quoteText, range: line)
-            if theme.quoteItalic {
-                transformFont(line) { NSFontManager.shared.convert($0, toHaveTrait: .italicFontMask) }
+            if block != nil {
+                // Callout text reads as body text, even inside a quote or in a theme with italic quotes.
+                storage.addAttribute(.foregroundColor, value: theme.text, range: line)
+                if theme.quoteItalic {
+                    transformFont(line) { NSFontManager.shared.convert($0, toNotHaveTrait: .italicFontMask) }
+                }
+            } else {
+                storage.addAttribute(.foregroundColor, value: theme.quoteText, range: line)
+                if theme.quoteItalic {
+                    transformFont(line) { NSFontManager.shared.convert($0, toHaveTrait: .italicFontMask) }
+                }
             }
             if let marker = Self.quoteMarkerRegex.firstMatch(in: source, options: .anchored, range: line) {
                 addMarker(marker.range)
             }
         }
+
+        if let callout, let first = quoteLines.first, let last = quoteLines.last {
+            calloutQuoteStarts.insert(range.location)
+            styleCalloutHeader(callout.marker, at: callout.start, line: first)
+            callouts.append((header: first, last: last))
+        }
+    }
+
+    /// The callout marker of the quote whose `>` is at `quoteStart`: `[!type]` right after that `>` and its
+    /// space, and where the marker starts. Read from the source, not the parsed paragraph: the parser sees
+    /// `[!NOTE]` as text (or a link, when one is defined), and gives no position to a paragraph a table interrupts.
+    private func calloutMarker(at quoteStart: Int, firstLine: NSRange?) -> (marker: CalloutMarker, start: Int)? {
+        guard let firstLine, quoteStart >= firstLine.location, quoteStart < NSMaxRange(firstLine),
+              text.character(at: quoteStart) == 62 // ">"
+        else { return nil }
+        var start = quoteStart + 1
+        if start < NSMaxRange(firstLine), [32, 9].contains(text.character(at: start)) { start += 1 }
+        let content = text.substring(with: NSRange(location: start, length: NSMaxRange(firstLine) - start))
+        return CalloutMarker.parse(content).map { ($0, start) }
+    }
+
+    /// Hides the marker. Unless the line is being edited, the layout manager draws the icon (and the label,
+    /// when there is no title) in its place, and a title is shown bold in the callout's color, after the icon.
+    private func styleCalloutHeader(_ marker: CalloutMarker, at start: Int, line: NSRange) {
+        let markerRange = NSRange(location: start, length: marker.markerLength)
+        addMarker(markerRange)
+        calloutHeaderLines.insert(line.location)
+        guard !onActiveLine(start) else { return }
+        storage.addAttribute(.calloutHeader, value: CalloutHeader(kind: marker.kind, label: marker.hasTitle ? nil : marker.label),
+                             range: text.lineRange(for: line))
+        guard marker.hasTitle else { return }
+        let title = NSRange(location: NSMaxRange(markerRange), length: NSMaxRange(line) - NSMaxRange(markerRange))
+        transformFont(title) { NSFontManager.shared.convert($0, toHaveTrait: .boldFontMask) }
+        storage.addAttribute(.foregroundColor, value: marker.kind.family.color(dark: theme.isDark), range: title)
+        paddingKerns.append((NSMaxRange(markerRange) - 1, CalloutStyle.iconSize + CalloutStyle.iconGap))
     }
 
     func styleListItem(_ item: ListItem) {
@@ -929,7 +1006,8 @@ private final class StyleContext {
         // Line 1 is the header, line 2 the |---| delimiter, the rest the body.
         var rows = [TablePlan.Row(line: rowLines[0], isHeader: true)]
         rows += rowLines.dropFirst(2).map { TablePlan.Row(line: $0, isHeader: false) }
-        tables.append(TablePlan(rows: rows, alignments: table.columnAlignments, indent: indent(for: table)))
+        tables.append(TablePlan(rows: rows, alignments: table.columnAlignments, indent: indent(for: table),
+                                rightInset: calloutInset(for: table)))
 
         let delimiter = rowLines[1]
         if !onActiveLine(delimiter.location) {
@@ -1121,6 +1199,41 @@ private final class StyleContext {
         }
         layoutTables()
         separateAdjacentBlocks()
+        padCallouts()
+    }
+
+    /// A callout's box has room inside it: space above its first line and below its last, added to the
+    /// gap around the block rather than taken from it, and a right inset for each box the text is in.
+    private func padCallouts() {
+        var insets: [(range: NSRange, style: NSParagraphStyle, depth: Int)] = []
+        storage.enumerateAttribute(.callout, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            guard let blocks = value as? [CalloutBlock] else { return }
+            storage.enumerateAttribute(.paragraphStyle, in: range) { style, subrange, _ in
+                if let style = style as? NSParagraphStyle { insets.append((subrange, style, blocks.count)) }
+            }
+        }
+        for inset in insets {
+            let style = inset.style.mutableCopy() as! NSMutableParagraphStyle
+            style.tailIndent = -CalloutStyle.rightPadding * CGFloat(inset.depth)
+            storage.addAttribute(.paragraphStyle, value: style, range: inset.range)
+        }
+        // A callout right after another one, with no blank line between (consecutive list items), keeps apart from it.
+        let ends = Set(callouts.map { NSMaxRange(text.lineRange(for: $0.last)) })
+        for callout in callouts {
+            let gap = ends.contains(callout.header.location) ? CalloutStyle.adjacentGap : 0
+            adjustParagraph(of: callout.header) { $0.paragraphSpacingBefore += CalloutStyle.topPadding + gap }
+            adjustParagraph(of: callout.last) { $0.paragraphSpacing += CalloutStyle.bottomPadding }
+        }
+    }
+
+    private func adjustParagraph(of line: NSRange, _ change: (NSMutableParagraphStyle) -> Void) {
+        let full = text.lineRange(for: line)
+        guard full.location < storage.length,
+              let style = storage.attribute(.paragraphStyle, at: full.location, effectiveRange: nil) as? NSParagraphStyle
+        else { return }
+        let adjusted = style.mutableCopy() as! NSMutableParagraphStyle
+        change(adjusted)
+        storage.addAttribute(.paragraphStyle, value: adjusted, range: full)
     }
 
     /// Blocks are separated by the theme's gap, like CSS margins. A blank line provides it;
@@ -1205,7 +1318,7 @@ private final class StyleContext {
                 }
             }
             // Tables fill the column, like `width: 100%`, sharing the extra space by content width.
-            let available = availableWidth - table.indent
+            let available = availableWidth - table.indent - table.rightInset
             let natural = columnWidths.reduce(0, +)
             if natural > 0, natural < available {
                 columnWidths = columnWidths.map { $0 + (available - natural) * $0 / natural }
@@ -1251,7 +1364,10 @@ private final class StyleContext {
     }
 
     /// The content ranges of a table row's cells, split on unescaped pipes outside code spans.
-    private func cellRanges(in line: NSRange) -> [NSRange] {
+    private func cellRanges(in row: NSRange) -> [NSRange] {
+        // A row inside a quote or list starts with its markers and indentation, which aren't a cell.
+        let prefix = Self.lineIndentRegex.firstMatch(in: source, options: .anchored, range: row)?.range.length ?? 0
+        let line = NSRange(location: row.location + prefix, length: row.length - prefix)
         var separators: [Int] = []
         var index = line.location
         var inCode = false

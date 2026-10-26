@@ -11,6 +11,10 @@ extension NSAttributedString.Key {
     static let codeLanguage = NSAttributedString.Key("CeraCodeLanguage")
     /// Marks a quote line. The value lists the x of each quote bar ([CGFloat]), one per nesting level.
     static let quoteBar = NSAttributedString.Key("CeraQuoteBar")
+    /// Marks a callout line. The value lists the callout boxes it is in ([CalloutBlock]), outer first.
+    static let callout = NSAttributedString.Key("CeraCallout")
+    /// On a callout's first line while it isn't being edited: the icon and label to draw (`CalloutHeader`).
+    static let calloutHeader = NSAttributedString.Key("CeraCalloutHeader")
     /// Marks an image paragraph. The value is an `ImageBlock`.
     static let imageBlock = NSAttributedString.Key("CeraImageBlock")
     /// Marks a table row. The value is a `TableRowInfo`.
@@ -203,6 +207,11 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
         guard !panel.isNull else { return nil }
         panel.origin.x = container.lineFragmentPadding + panelX
         panel.size.width = container.size.width - 2 * container.lineFragmentPadding - panelX
+        // Inside a callout, the panel stops where the callout's text does, inside the box.
+        if let style = storage.attribute(.paragraphStyle, at: block.location, effectiveRange: nil) as? NSParagraphStyle,
+           style.tailIndent < 0 {
+            panel.size.width += style.tailIndent
+        }
         return (panel, block)
     }
 
@@ -246,6 +255,9 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
         let characters = characterRange(forGlyphRange: glyphsToShow, actualGlyphRange: nil)
         let columnX = origin.x + container.lineFragmentPadding
         let columnWidth = container.size.width - 2 * container.lineFragmentPadding
+
+        // Callout boxes go first, so code panels and the bars of quotes inside them draw on top.
+        drawCallouts(in: characters, at: origin)
 
         // Code panels span the whole block, not just the visible part, so their shape is stable while scrolling.
         storage.enumerateAttribute(.codeBlock, in: characters) { value, range, _ in
@@ -300,7 +312,7 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
 
         storage.enumerateAttribute(.tableRow, in: characters) { value, range, _ in
             guard let row = value as? TableRowInfo, let left = row.edges.first, let right = row.edges.last else { return }
-            let line = lineRect(forGlyphAt: glyphIndexForCharacter(at: range.location))
+            let line = tableRowRect(at: range.location)
             let top = origin.y + line.minY
             theme.rule.setFill()
             // Top border of every row, bottom border of the last, and the column lines.
@@ -372,6 +384,124 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
             // Right-align the marker a little before the text, like a rendered list.
             let size = marker.size()
             marker.draw(at: NSPoint(x: textStart - size.width - 8, y: centerY - size.height / 2))
+        }
+    }
+
+    /// The table row holding `location`, in container coordinates: its line without any spacing before or after it
+    /// (a table that ends a callout has the callout's bottom padding after its last row).
+    func tableRowRect(at location: Int) -> NSRect {
+        guard let storage = textStorage, location < storage.length else { return .zero }
+        var line = lineRect(forGlyphAt: glyphIndexForCharacter(at: location))
+        if let style = storage.attribute(.paragraphStyle, at: location, effectiveRange: nil) as? NSParagraphStyle,
+           style.maximumLineHeight > 0 {
+            line.size.height = min(line.height, style.maximumLineHeight)
+        }
+        return line
+    }
+
+    // MARK: Callouts
+
+    /// The callout boxes drawn for `characters`, in container coordinates. Each spans its whole callout, not just
+    /// the visible part, so its shape is stable while scrolling. The box holds the padding the styler added: the
+    /// space before the first line (cut off by `unionOfLines`, so added back) and the spacing after the last.
+    func calloutBoxes(in characters: NSRange) -> [(block: CalloutBlock, rect: NSRect)] {
+        guard let storage = textStorage, let container = textContainers.first else { return [] }
+        // Not `storage.string`, which would copy the whole document on every draw.
+        let text: NSString = storage.mutableString
+        var found: [(block: CalloutBlock, extent: NSRange)] = []
+        storage.enumerateAttribute(.callout, in: characters) { value, range, _ in
+            guard let blocks = value as? [CalloutBlock] else { return }
+            for block in blocks where !found.contains(where: { $0.block == block && NSLocationInRange(range.location, $0.extent) }) {
+                found.append((block, calloutExtent(of: block, around: range.location, in: storage, text: text)))
+            }
+        }
+        let columnRight = container.size.width - container.lineFragmentPadding
+        return found.compactMap { item in
+            let lines = unionOfLines(for: item.extent)
+            guard !lines.isNull else { return nil }
+            let left = container.lineFragmentPadding + item.block.x
+            let right = columnRight - CGFloat(item.block.depth) * CalloutStyle.rightPadding
+            // Callouts around this one that end on its last line each added their bottom padding there too,
+            // below this box's, so it ends above theirs.
+            let lastLine = text.lineRange(for: NSRange(location: NSMaxRange(item.extent) - 1, length: 0))
+            let onLast = storage.attribute(.callout, at: lastLine.location, effectiveRange: nil) as? [CalloutBlock] ?? []
+            let onNext = NSMaxRange(lastLine) < storage.length
+                ? storage.attribute(.callout, at: NSMaxRange(lastLine), effectiveRange: nil) as? [CalloutBlock] ?? [] : []
+            let endingAround = onLast.filter { $0.depth < item.block.depth && !onNext.contains($0) }.count
+            let bottom = lines.maxY - CGFloat(endingAround) * CalloutStyle.bottomPadding
+            return (item.block, NSRect(x: left, y: lines.minY - CalloutStyle.topPadding,
+                                       width: right - left, height: bottom - lines.minY + CalloutStyle.topPadding))
+        }
+    }
+
+    /// The lines of the callout `block` that holds `location`: the run of lines around it in that callout.
+    private func calloutExtent(of block: CalloutBlock, around location: Int, in storage: NSTextStorage, text: NSString) -> NSRange {
+        func holds(_ line: NSRange) -> Bool {
+            line.location < storage.length
+                && (storage.attribute(.callout, at: line.location, effectiveRange: nil) as? [CalloutBlock])?.contains(block) == true
+        }
+        var first = text.lineRange(for: NSRange(location: location, length: 0))
+        var last = first
+        while first.location > 0 {
+            let previous = text.lineRange(for: NSRange(location: first.location - 1, length: 0))
+            guard holds(previous) else { break }
+            first = previous
+        }
+        while NSMaxRange(last) < text.length {
+            let next = text.lineRange(for: NSRange(location: NSMaxRange(last), length: 0))
+            guard holds(next) else { break }
+            last = next
+        }
+        return NSRange(location: first.location, length: NSMaxRange(last) - first.location)
+    }
+
+    /// Where the icon of the callout whose header line starts at `location` goes, in container coordinates:
+    /// where the line's text starts, centered on its first line of text.
+    func calloutIconRect(atHeader location: Int) -> NSRect {
+        guard let storage = textStorage, let container = textContainers.first, location < storage.length else { return .zero }
+        let glyph = glyphIndexForCharacter(at: location)
+        let fragment = lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
+        let paragraph = storage.attribute(.paragraphStyle, at: location, effectiveRange: nil) as? NSParagraphStyle
+        let centerY = lineRect(forGlyphAt: glyph).minY + (paragraph?.minimumLineHeight ?? theme.lineHeight) / 2
+        let size = CalloutStyle.iconSize
+        let x = fragment.minX + container.lineFragmentPadding + (paragraph?.firstLineHeadIndent ?? 0)
+        return NSRect(x: x, y: centerY - size / 2, width: size, height: size)
+    }
+
+    /// Draws each callout's box (a faint fill, a thin border, and a thick left edge) and its header's icon and label.
+    private func drawCallouts(in characters: NSRange, at origin: NSPoint) {
+        guard let storage = textStorage else { return }
+        for (block, box) in calloutBoxes(in: characters) {
+            let color = block.kind.family.color(dark: theme.isDark)
+            let rect = box.offsetBy(dx: origin.x, dy: origin.y)
+            let shape = NSBezierPath(roundedRect: rect.insetBy(dx: 0.5, dy: 0.5), xRadius: CalloutStyle.radius, yRadius: CalloutStyle.radius)
+            color.withAlphaComponent(CalloutStyle.fillAlpha(dark: theme.isDark)).setFill()
+            shape.fill()
+            color.withAlphaComponent(CalloutStyle.borderAlpha).setStroke()
+            shape.lineWidth = 1
+            shape.stroke()
+            NSGraphicsContext.saveGraphicsState()
+            NSBezierPath(roundedRect: rect, xRadius: CalloutStyle.radius, yRadius: CalloutStyle.radius).addClip()
+            color.setFill()
+            NSRect(x: rect.minX, y: rect.minY, width: CalloutStyle.edgeWidth, height: rect.height).fill()
+            NSGraphicsContext.restoreGraphicsState()
+        }
+
+        storage.enumerateAttribute(.calloutHeader, in: characters) { value, range, _ in
+            guard let header = value as? CalloutHeader else { return }
+            let color = header.kind.family.color(dark: theme.isDark)
+            let slot = calloutIconRect(atHeader: range.location).offsetBy(dx: origin.x, dy: origin.y)
+            if let icon = header.kind.icon(color: color, pointSize: theme.bodyFont.pointSize - 2), icon.size.width > 0, icon.size.height > 0 {
+                let scale = min(slot.width / icon.size.width, slot.height / icon.size.height, 1)
+                let size = NSSize(width: icon.size.width * scale, height: icon.size.height * scale)
+                icon.draw(in: NSRect(x: slot.midX - size.width / 2, y: slot.midY - size.height / 2, width: size.width, height: size.height),
+                          from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
+            }
+            guard let label = header.label else { return }
+            let font = NSFontManager.shared.convert(theme.bodyFont, toHaveTrait: .boldFontMask)
+            let text = NSAttributedString(string: label, attributes: [.font: font, .foregroundColor: color])
+            let size = text.size()
+            text.draw(at: NSPoint(x: slot.maxX + CalloutStyle.iconGap, y: slot.midY - size.height / 2))
         }
     }
 

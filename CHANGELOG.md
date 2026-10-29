@@ -2,6 +2,13 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.11 (2026-10-29)
+
+- **Copy the file's name or path.** The status bar now shows the open file's name at the left; click it for Copy
+  Name, Copy Path, and Reveal in Finder, to grab the name or the full path again without leaving the document.
+  The same three are at the bottom of the File menu: Copy Name (⌃⇧⌘C) and Copy Path (⌥⇧⌘C, Finder's key for
+  copying a pathname). An unsaved document reads Untitled, with the items disabled.
+
 ## 0.6.10 (2026-10-26)
 
 - **Callouts.** A quote that starts with `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, or `[!CAUTION]`, the

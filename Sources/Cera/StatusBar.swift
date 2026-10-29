@@ -1,14 +1,18 @@
 import AppKit
 import SwiftUI
 
-/// The status bar along the bottom of a window: where the insertion point is (`Ln 12, Col 5`), and how many words
-/// the document has, or the selection (`9 of 1,234 words`).
+/// The status bar along the bottom of a window: the file's name at the left (click it for Copy Name, Copy Path,
+/// and Reveal in Finder), and at the right where the insertion point is (`Ln 12, Col 5`) and how many words the
+/// document has, or the selection (`9 of 1,234 words`).
 struct StatusBar: View {
     @ObservedObject var model: StatusModel
+    /// The file the document is saved in; nil until the first save.
+    var fileURL: URL?
     let theme: Theme
 
     var body: some View {
         HStack(spacing: 24) {
+            FileNameMenu(fileURL: fileURL)
             Spacer(minLength: 0)
             Text(model.positionText)
             Text(model.wordsText)
@@ -19,6 +23,31 @@ struct StatusBar: View {
         .padding(.horizontal, 14)
         .frame(height: 22)
         .background(Color(nsColor: theme.background))
+    }
+}
+
+/// The file name in the status bar, and the menu it opens: the ways to grab the name or path again without leaving
+/// the document. An unsaved document reads `Untitled`, with the copy items disabled.
+private struct FileNameMenu: View {
+    var fileURL: URL?
+
+    var body: some View {
+        Menu {
+            Button("Copy Name") { if let fileURL { FileLocation.copyName(of: fileURL) } }
+            Button("Copy Path") { if let fileURL { FileLocation.copyPath(of: fileURL) } }
+            Divider()
+            Button("Reveal in Finder") { if let fileURL { FileLocation.revealInFinder(fileURL) } }
+        } label: {
+            Text(FileLocation.name(of: fileURL))
+                .truncationMode(.middle)
+        }
+        .disabled(fileURL == nil)
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize(horizontal: false, vertical: true)
+        .help(FileLocation.path(of: fileURL) ?? "Not saved yet")
+        .accessibilityLabel("File name")
     }
 }
 

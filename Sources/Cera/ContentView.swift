@@ -53,7 +53,7 @@ struct ContentView: View {
                         }
                     }
                 if showsStatusBar {
-                    StatusBar(model: status, theme: theme)
+                    StatusBar(model: status, fileURL: fileURL, theme: theme)
                 }
             }
         }
@@ -101,6 +101,7 @@ struct ContentView: View {
         .focusedSceneValue(\.showsSource, $showsSource)
         .focusedSceneValue(\.showsStatusBar, $showsStatusBar)
         .focusedSceneValue(\.isLocked, $isLocked)
+        .focusedSceneValue(\.fileURL, fileURL)
     }
 }
 
@@ -143,5 +144,16 @@ extension FocusedValues {
 
     private struct IsLockedKey: FocusedValueKey {
         typealias Value = Binding<Bool>
+    }
+
+    /// The file the focused window's document is saved in, for the File menu's Copy Name, Copy Path, and Reveal
+    /// in Finder; nil for a document not saved yet.
+    var fileURL: URL? {
+        get { self[FileURLKey.self] }
+        set { self[FileURLKey.self] = newValue }
+    }
+
+    private struct FileURLKey: FocusedValueKey {
+        typealias Value = URL
     }
 }

@@ -5,7 +5,7 @@ tags: [markdown, test]
 Cera Feature Tour
 =================
 
-Every Markdown feature Cera renders, in one place. Move the cursor onto a line to see its Markdown; move away and it renders again. The status bar at the bottom shows the line, column, and word count, and the selection's.
+Every Markdown feature Cera renders, in one place. Move the cursor onto a line to see its Markdown; move away and it renders again. The status bar at the bottom shows the file's name (click it to copy the name or path), the line, column, and word count, and the selection's.
 
 The muted lines at the very top are front matter, metadata for tools like Jekyll, Hugo and Obsidian. Cera shows it as source and leaves it out of the document.
 

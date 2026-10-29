@@ -36,12 +36,27 @@ struct CeraCommands: Commands {
     @FocusedBinding(\.showsSource) private var showsSource
     @FocusedBinding(\.showsStatusBar) private var showsStatusBar
     @FocusedBinding(\.isLocked) private var isLocked
+    @FocusedValue(\.fileURL) private var fileURL
     @AppStorage(TextZoom.key) private var zoom = 1.0
 
     var body: some Commands {
         CommandGroup(after: .newItem) {
             Button("New Tab") { Self.newTab() }
                 .keyboardShortcut("t")
+        }
+
+        // The open file's name and path, to grab again while in the document. ⌥⇧⌘C is Finder's key for copying a
+        // pathname; ⌥⌘C is taken by Insert ▸ Code Block. Disabled until the document is saved.
+        CommandGroup(after: .saveItem) {
+            Divider()
+            Button("Copy Name") { if let fileURL { FileLocation.copyName(of: fileURL) } }
+                .keyboardShortcut("c", modifiers: [.command, .shift, .control])
+                .disabled(fileURL == nil)
+            Button("Copy Path") { if let fileURL { FileLocation.copyPath(of: fileURL) } }
+                .keyboardShortcut("c", modifiers: [.command, .shift, .option])
+                .disabled(fileURL == nil)
+            Button("Reveal in Finder") { if let fileURL { FileLocation.revealInFinder(fileURL) } }
+                .disabled(fileURL == nil)
         }
 
         // Pastes the clipboard's text as it is: a URL over selected text stays a URL instead of making a link.

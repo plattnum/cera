@@ -248,16 +248,20 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
         }
     }
 
+    /// Callout boxes, code panels, and inline code boxes go under the selection highlight, which
+    /// `super` draws, so selected code looks selected as selected prose does. The marks that stand
+    /// in for text (quote bars, images, table rules, bullets) go over it, as glyphs do.
     override func drawBackground(forGlyphRange glyphsToShow: NSRange, at origin: NSPoint) {
-        super.drawBackground(forGlyphRange: glyphsToShow, at: origin)
-        guard let storage = textStorage, let container = textContainers.first else { return }
+        guard let storage = textStorage, let container = textContainers.first else {
+            return super.drawBackground(forGlyphRange: glyphsToShow, at: origin)
+        }
 
         let characters = characterRange(forGlyphRange: glyphsToShow, actualGlyphRange: nil)
         let columnX = origin.x + container.lineFragmentPadding
         let columnWidth = container.size.width - 2 * container.lineFragmentPadding
 
         // Callout boxes go first, so code panels and the bars of quotes inside them draw on top.
-        drawCallouts(in: characters, at: origin)
+        drawCalloutBoxes(in: characters, at: origin)
 
         // Code panels span the whole block, not just the visible part, so their shape is stable while scrolling.
         storage.enumerateAttribute(.codeBlock, in: characters) { value, range, _ in
@@ -292,6 +296,11 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
                 }
             }
         }
+
+        // The selection highlight.
+        super.drawBackground(forGlyphRange: glyphsToShow, at: origin)
+
+        drawCalloutHeaders(in: characters, at: origin)
 
         storage.enumerateAttribute(.quoteBar, in: characters) { value, range, _ in
             guard let bars = value as? [CGFloat] else { return }
@@ -468,9 +477,8 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
         return NSRect(x: x, y: centerY - size / 2, width: size, height: size)
     }
 
-    /// Draws each callout's box (a faint fill, a thin border, and a thick left edge) and its header's icon and label.
-    private func drawCallouts(in characters: NSRange, at origin: NSPoint) {
-        guard let storage = textStorage else { return }
+    /// Draws each callout's box: a faint fill, a thin border, and a thick left edge.
+    private func drawCalloutBoxes(in characters: NSRange, at origin: NSPoint) {
         for (block, box) in calloutBoxes(in: characters) {
             let color = block.kind.family.color(dark: theme.isDark)
             let rect = box.offsetBy(dx: origin.x, dy: origin.y)
@@ -486,7 +494,11 @@ final class MarkdownLayoutManager: NSLayoutManager, NSLayoutManagerDelegate {
             NSRect(x: rect.minX, y: rect.minY, width: CalloutStyle.edgeWidth, height: rect.height).fill()
             NSGraphicsContext.restoreGraphicsState()
         }
+    }
 
+    /// Draws each callout header's icon and label, which stand in for its hidden marker.
+    private func drawCalloutHeaders(in characters: NSRange, at origin: NSPoint) {
+        guard let storage = textStorage else { return }
         storage.enumerateAttribute(.calloutHeader, in: characters) { value, range, _ in
             guard let header = value as? CalloutHeader else { return }
             let color = header.kind.family.color(dark: theme.isDark)

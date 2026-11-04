@@ -8,6 +8,7 @@ struct CeraApp: App {
     init() {
         // Start with an empty document, like Notepad, instead of an Open panel.
         UserDefaults.standard.register(defaults: ["NSShowAppCentricOpenPanelInsteadOfUntitledFile": false])
+        UserDefaults.standard.register(defaults: ColumnWidth.defaults)
     }
 
     var body: some Scene {

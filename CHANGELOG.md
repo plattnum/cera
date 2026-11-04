@@ -2,7 +2,7 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
-## 0.6.12 (2026-11-04)
+## 0.6.13 (2026-11-04)
 
 - **Column width slider.** A slider at the right end of the status bar widens the text column into the margins:
   0% is the theme's column, 100% is the whole window less the page margin, so a wide table can spread out on a

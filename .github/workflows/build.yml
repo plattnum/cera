@@ -37,6 +37,15 @@ jobs:
         if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
         run: ./scripts/bundle.sh --zip
 
+      # Stapling fetches the notarization ticket over HTTP/3 (UDP 443), which the hosted macOS
+      # runners drop; blocking UDP 443 makes stapler fall back to HTTPS over TCP, which works.
+      # GitHub's suggested workaround for actions/runner-images#14924.
+      - name: Work around stapling network drops (actions/runner-images#14924)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          echo "block return out quick proto udp from any to any port 443" | sudo pfctl -f -
+          sudo pfctl -E
+
       # Releases are signed with the Developer ID and notarized, so downloads open without
       # a Gatekeeper warning. The certificate and notary password come from repository secrets.
       - name: Build, sign, and notarize Cera.app

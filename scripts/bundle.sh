@@ -79,8 +79,18 @@ if $release; then
         exit 1
     fi
 
-    # Attach the ticket to the app so it opens offline too, then zip the stapled app.
-    xcrun stapler staple "$APP"
+    # Attach the ticket to the app so it opens offline too, then zip the stapled app. The ticket
+    # can take a moment to reach Apple's ticket server, and the connection to it sometimes drops
+    # (stapler exits 68 without changing the app), so try a few times, waiting longer each time.
+    for attempt in 1 2 3 4 5; do
+        xcrun stapler staple "$APP" && break
+        if [[ $attempt == 5 ]]; then
+            echo "Stapling failed after $attempt attempts." >&2
+            exit 1
+        fi
+        echo "Stapling failed; trying again in $((attempt * 30))s (attempt $attempt of 5)..." >&2
+        sleep $((attempt * 30))
+    done
     make_zip
     spctl --assess --type execute --verbose "$APP"
     echo "Built $ZIP (signed by $identity, notarized)"

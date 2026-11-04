@@ -23,6 +23,8 @@ struct MarkdownEditor: NSViewRepresentable {
     var status: StatusModel?
     /// How much the document is magnified (see `TextZoom`); 1 is actual size.
     var zoom: Double = 1
+    /// How far the column reaches into the margins (see `ColumnWidth`), 0 to 100.
+    var columnPercent: Double = 0
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -54,6 +56,7 @@ struct MarkdownEditor: NSViewRepresentable {
         context.coordinator.observeScrolling(of: scrollView)
 
         scrollView.magnification = TextZoom.clamped(zoom)
+        textView.columnPercent = columnPercent
         textView.string = text
         context.coordinator.restyle()
         return scrollView
@@ -67,6 +70,7 @@ struct MarkdownEditor: NSViewRepresentable {
         // The text view's width changes with it, which keeps the reading position and rewraps, as a resize does.
         let magnification = TextZoom.clamped(zoom)
         if abs(scrollView.magnification - magnification) > 0.001 { scrollView.magnification = magnification }
+        textView.columnPercent = columnPercent
         textView.documentFolder = baseURL
         textView.isLocked = isLocked
         textView.onRefusedEdit = onRefusedEdit

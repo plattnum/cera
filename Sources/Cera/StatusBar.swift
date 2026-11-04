@@ -2,8 +2,8 @@ import AppKit
 import SwiftUI
 
 /// The status bar along the bottom of a window: the file's name at the left (click it for Copy Name, Copy Path,
-/// and Reveal in Finder), and at the right where the insertion point is (`Ln 12, Col 5`) and how many words the
-/// document has, or the selection (`9 of 1,234 words`).
+/// and Reveal in Finder), and at the right where the insertion point is (`Ln 12, Col 5`), how many words the
+/// document has, or the selection (`9 of 1,234 words`), and the column width slider (see `ColumnWidth`).
 struct StatusBar: View {
     @ObservedObject var model: StatusModel
     /// The file the document is saved in; nil until the first save.
@@ -16,6 +16,7 @@ struct StatusBar: View {
             Spacer(minLength: 0)
             Text(model.positionText)
             Text(model.wordsText)
+            ColumnWidthSlider(theme: theme)
         }
         .font(.system(size: 11).monospacedDigit())
         .foregroundStyle(Color(nsColor: theme.marker))
@@ -23,6 +24,31 @@ struct StatusBar: View {
         .padding(.horizontal, 14)
         .frame(height: 22)
         .background(Color(nsColor: theme.background))
+    }
+}
+
+/// The column width slider at the right end of the bar: drag to widen the column into the margins. The number
+/// beside it is the percentage; double-click it to go back to the default from Settings.
+private struct ColumnWidthSlider: View {
+    let theme: Theme
+    @AppStorage(ColumnWidth.key) private var percent = 20.0
+    @AppStorage(ColumnWidth.defaultKey) private var defaultPercent = 20.0
+    @AppStorage(ColumnWidth.sliderLengthKey) private var sliderLength = 150.0
+
+    var body: some View {
+        let shown = ColumnWidth.clamped(percent)
+        HStack(spacing: 8) {
+            Slider(value: Binding(get: { shown }, set: { percent = $0 }), in: 0...100)
+                .controlSize(.mini)
+                .frame(width: ColumnWidth.clampedSliderLength(sliderLength))
+                .accessibilityLabel("Column width")
+            Text("\(Int(shown.rounded()))%")
+                .frame(width: 34, alignment: .trailing)
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) { percent = ColumnWidth.clamped(defaultPercent) }
+                .accessibilityLabel("Column width percentage")
+        }
+        .help("Column width: 0% is the theme's column, 100% the whole window. Double-click the number to go back to \(Int(ColumnWidth.clamped(defaultPercent).rounded()))%.")
     }
 }
 

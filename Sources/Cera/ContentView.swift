@@ -10,6 +10,7 @@ struct ContentView: View {
     @AppStorage("checksSpelling") private var checksSpelling = false
     @AppStorage("joinsHardWrappedLines") private var joinsHardWrappedLines = false
     @AppStorage(TextZoom.key) private var zoom = 1.0
+    @AppStorage(ColumnWidth.key) private var columnPercent = 20.0
     /// Follows changes other apps and agents make to the file.
     @StateObject private var diskSync = DiskSync()
     @StateObject private var outline = OutlineModel()
@@ -39,7 +40,8 @@ struct ContentView: View {
                                baseURL: fileURL?.deletingLastPathComponent(), checksSpelling: checksSpelling,
                                joinsHardWrappedLines: joinsHardWrappedLines, showsSource: showsSource,
                                isLocked: isLocked, onRefusedEdit: { refusedEdits += 1 },
-                               undoManager: undoManager, outline: outline, status: status, zoom: zoom)
+                               undoManager: undoManager, outline: outline, status: status, zoom: zoom,
+                               columnPercent: ColumnWidth.clamped(columnPercent))
                     .frame(minWidth: showsOutline ? 360 : 520, minHeight: 360)
                     .ignoresSafeArea(.container, edges: .top)
                     .overlay(alignment: .top) {

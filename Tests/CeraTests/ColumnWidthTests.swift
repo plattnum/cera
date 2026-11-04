@@ -39,3 +39,58 @@ final class ColumnWidthTests: XCTestCase {
         XCTAssertEqual(ColumnWidth.defaults[ColumnWidth.sliderLengthKey] as? Double, 150)
     }
 }
+
+/// The text view's column at a percentage.
+@MainActor
+final class ColumnPercentTests: XCTestCase {
+    private var window: NSWindow?
+
+    override func tearDown() {
+        window?.close()
+    }
+
+    /// A styled, laid-out editor in a window `width` wide, in the Ivory theme (960pt column, 68pt margins). The
+    /// text view is narrower than the window by the scroller.
+    private func editor(width: CGFloat) -> MarkdownTextView {
+        let (scrollView, textView) = MarkdownEditor.makeScrollView()
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: width, height: 600), styleMask: [.titled],
+                              backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = scrollView
+        self.window = window
+        scrollView.layoutSubtreeIfNeeded()
+        textView.apply(.ivory)
+        textView.string = "Some text"
+        MarkdownStyler(theme: .ivory).style(textView.textStorage!, caret: 0)
+        textView.layoutManager!.ensureLayout(for: textView.textContainer!)
+        return textView
+    }
+
+    func testPercentWidensTheColumn() {
+        let view = editor(width: 1300)
+        let width = view.frame.width
+        XCTAssertGreaterThan(width, 1200)
+        XCTAssertEqual(view.textContainerInset.width, (width - 960) / 2, accuracy: 0.5, "0%: today's centered column")
+        view.columnPercent = 100
+        XCTAssertEqual(view.textContainerInset.width, 68, accuracy: 0.5, "100%: the page margin only")
+        view.columnPercent = 50
+        XCTAssertEqual(view.textContainerInset.width, (width - (960 + (width - 136 - 960) / 2)) / 2, accuracy: 0.5)
+    }
+
+    func testNarrowWindowKeepsThePageMargin() {
+        let view = editor(width: 600)
+        view.columnPercent = 100
+        XCTAssertEqual(view.textContainerInset.width, 68, accuracy: 0.5)
+    }
+
+    func testChangingThePercentRewrapsAndTellsTheEditor() {
+        let view = editor(width: 1300)
+        var changes = 0
+        view.onWidthChange = { changes += 1 }
+        view.columnPercent = 100
+        XCTAssertEqual(changes, 1)
+        XCTAssertEqual(view.textContainer!.size.width, view.frame.width - 136, accuracy: 1, "the text wraps in the wider column")
+        view.columnPercent = 100
+        XCTAssertEqual(changes, 1, "the same value again changes nothing")
+    }
+}

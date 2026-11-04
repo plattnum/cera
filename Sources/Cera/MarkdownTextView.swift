@@ -157,6 +157,19 @@ final class MarkdownTextView: NSTextView {
     /// Called when the text column's width changes, so images and tables can be resized.
     var onWidthChange: (() -> Void)?
 
+    /// How far the column reaches into the margins (see `ColumnWidth`): 0 is the theme's column, 100 the whole
+    /// window less the page margins. A change rewraps the text like a resize does.
+    var columnPercent: Double = 0 {
+        didSet {
+            guard ColumnWidth.clamped(columnPercent) != ColumnWidth.clamped(oldValue) else { return }
+            keepReadingPosition()
+            updateColumnInsets()
+            setNeedsUpdateTableScrollers()
+            onWidthChange?()
+            if formatBar?.isHidden == false { updateFormatBar() }
+        }
+    }
+
     /// The reading position waiting to be put back after a change, by `keepReadingPosition`.
     var heldReadingPosition: ReadingPosition?
 
@@ -202,9 +215,10 @@ final class MarkdownTextView: NSTextView {
         }
     }
 
-    /// Centers a column no wider than the theme's width; wider windows add margin on both sides.
+    /// Centers the column (the theme's width, widened by `columnPercent`); the rest of the window is margin on
+    /// both sides, never less than the theme's page margin.
     private func updateColumnInsets() {
-        let column = frame.width >= 1400 ? theme.wideColumnWidth : theme.columnWidth
+        let column = ColumnWidth.width(for: theme, windowWidth: frame.width, percent: columnPercent)
         let horizontal = max(theme.pageMargin, (frame.width - column) / 2)
         let inset = NSSize(width: horizontal, height: theme.topMargin)
         if textContainerInset != inset {

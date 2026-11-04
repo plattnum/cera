@@ -24,6 +24,10 @@ struct CeraApp: App {
         .commands {
             CeraCommands()
         }
+
+        Settings {
+            SettingsView()
+        }
     }
 }
 

@@ -2,6 +2,18 @@
 
 What's new in each version of Cera. A release's notes on GitHub are its section here.
 
+## 0.6.12 (2026-11-04)
+
+- **Column width slider.** A slider at the right end of the status bar widens the text column into the margins:
+  0% is the theme's column, 100% is the whole window less the page margin, so a wide table can spread out on a
+  big screen instead of scrolling sideways. The number beside it shows the percentage; double-click it to go
+  back to the default. One width for every window, remembered across launches. The slider shows once the window
+  is wider than the theme's column, since a narrower window already fills its margins.
+- **Settings.** Cera ▸ Settings… (⌘,) opens a settings window, Cera's first, with the slider's default
+  percentage and its length.
+- **Fixed: selecting text in a code block.** The selection highlight was drawn under the code block's panel, and
+  under inline code's box, so a selected line of code didn't look selected. It shows now, as it does over prose.
+
 ## 0.6.11 (2026-10-29)
 
 - **Copy the file's name or path.** The status bar now shows the open file's name at the left; click it for Copy

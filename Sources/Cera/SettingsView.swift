@@ -28,7 +28,7 @@ struct SettingsView: View {
             } header: {
                 Text("Column width")
             } footer: {
-                Text("0% is the theme's column; 100% is the whole window. The slider at the right of the status bar changes the width as you read. Double-click its number to go back to the default width.")
+                Text("0% is the theme's column; 100% is the whole window. The slider at the right of the status bar changes the width as you read, and shows once the window is wider than the theme's column. Double-click its number to go back to the default width.")
             }
         }
         .formStyle(.grouped)

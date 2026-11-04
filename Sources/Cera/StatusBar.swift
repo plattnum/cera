@@ -16,7 +16,9 @@ struct StatusBar: View {
             Spacer(minLength: 0)
             Text(model.positionText)
             Text(model.wordsText)
-            ColumnWidthSlider(theme: theme)
+            if model.columnCanWiden {
+                ColumnWidthSlider(theme: theme)
+            }
         }
         .font(.system(size: 11).monospacedDigit())
         .foregroundStyle(Color(nsColor: theme.marker))
@@ -28,7 +30,9 @@ struct StatusBar: View {
 }
 
 /// The column width slider at the right end of the bar: drag to widen the column into the margins. The number
-/// beside it is the percentage; double-click it to go back to the default from Settings.
+/// beside it is the percentage; double-click it to go back to the default from Settings. The bar shows it only
+/// in a window wide enough to widen the column (`StatusModel.columnCanWiden`): in a narrower one the text already
+/// fills the page margins, and the slider would crowd out the name and counts for nothing.
 private struct ColumnWidthSlider: View {
     let theme: Theme
     @AppStorage(ColumnWidth.key) private var percent = 20.0
@@ -37,16 +41,18 @@ private struct ColumnWidthSlider: View {
 
     var body: some View {
         let shown = ColumnWidth.clamped(percent)
+        let length = ColumnWidth.clampedSliderLength(sliderLength)
         HStack(spacing: 8) {
             Slider(value: Binding(get: { shown }, set: { percent = $0 }), in: 0...100)
                 .controlSize(.mini)
-                .frame(width: ColumnWidth.clampedSliderLength(sliderLength))
+                .frame(width: length)
                 .accessibilityLabel("Column width")
             Text("\(Int(shown.rounded()))%")
                 .frame(width: 34, alignment: .trailing)
                 .contentShape(Rectangle())
                 .onTapGesture(count: 2) { percent = ColumnWidth.clamped(defaultPercent) }
                 .accessibilityLabel("Column width percentage")
+                .accessibilityAction(named: "Reset to default") { percent = ColumnWidth.clamped(defaultPercent) }
         }
         .help("Column width: 0% is the theme's column, 100% the whole window. Double-click the number to go back to \(Int(ColumnWidth.clamped(defaultPercent).rounded()))%.")
     }
@@ -88,10 +94,27 @@ final class StatusModel: ObservableObject {
     @Published private(set) var words = 0
     @Published private(set) var selectedWords = 0
 
+    /// Whether the column width slider has room to work in, and so is shown: false in a window narrower than the
+    /// theme's column, where the text already fills the page margins (see `ColumnWidth.canWiden`).
+    @Published private(set) var columnCanWiden = true
+
     /// The editor whose text and selection are shown. Set by the editor.
     weak var textView: NSTextView? {
-        didSet { if textView !== oldValue { refresh() } }
+        didSet {
+            guard textView !== oldValue else { return }
+            if let frameObserver { NotificationCenter.default.removeObserver(frameObserver) }
+            frameObserver = nil
+            if let textView {
+                textView.postsFrameChangedNotifications = true
+                frameObserver = NotificationCenter.default.addObserver(
+                    forName: NSView.frameDidChangeNotification, object: textView, queue: nil) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.widthChanged() }
+                }
+            }
+            refresh()
+        }
     }
+    private var frameObserver: NSObjectProtocol?
 
     /// Whether the bar is on screen; while it isn't, nothing is counted.
     var isShown = false {
@@ -116,9 +139,17 @@ final class StatusModel: ObservableObject {
 
     /// Everything again: when the bar appears or the editor changes.
     func refresh() {
+        widthChanged()
         guard isShown, textView != nil else { return }
         textChanged(delay: 0)
         selectionChanged()
+    }
+
+    /// Checks whether the column can widen: when the editor's width or theme changes.
+    func widthChanged() {
+        guard let view = textView as? MarkdownTextView else { return }
+        let canWiden = ColumnWidth.canWiden(for: view.theme, windowWidth: view.frame.width)
+        if canWiden != columnCanWiden { columnCanWiden = canWiden }
     }
 
     func selectionChanged() {

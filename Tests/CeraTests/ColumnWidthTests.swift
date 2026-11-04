@@ -23,6 +23,13 @@ final class ColumnWidthTests: XCTestCase {
         XCTAssertEqual(ColumnWidth.width(for: .midnight, windowWidth: 600, percent: 100), 914)
     }
 
+    func testCanWidenOnlyWhenTheWindowIsWiderThanTheColumnAndMargins() {
+        XCTAssertFalse(ColumnWidth.canWiden(for: .midnight, windowWidth: 900), "the default window: 764pt between the margins")
+        XCTAssertFalse(ColumnWidth.canWiden(for: .midnight, windowWidth: 1050))
+        XCTAssertTrue(ColumnWidth.canWiden(for: .midnight, windowWidth: 1051))
+        XCTAssertTrue(ColumnWidth.canWiden(for: .midnight, windowWidth: 1600))
+    }
+
     func testStoredValuesAreKeptInRange() {
         XCTAssertEqual(ColumnWidth.clamped(150), 100)
         XCTAssertEqual(ColumnWidth.clamped(-1), 0)
@@ -81,6 +88,20 @@ final class ColumnPercentTests: XCTestCase {
         let view = editor(width: 600)
         view.columnPercent = 100
         XCTAssertEqual(view.textContainerInset.width, 68, accuracy: 0.5)
+    }
+
+    func testStatusModelKnowsWhetherTheColumnCanWiden() {
+        let view = editor(width: 900)
+        let status = StatusModel()
+        status.isShown = true
+        status.textView = view
+        XCTAssertFalse(status.columnCanWiden, "a window narrower than the column already fills the margins")
+        window?.setContentSize(NSSize(width: 1300, height: 600))
+        window?.contentView?.layoutSubtreeIfNeeded()
+        XCTAssertTrue(status.columnCanWiden, "it follows the window's width")
+        window?.setContentSize(NSSize(width: 800, height: 600))
+        window?.contentView?.layoutSubtreeIfNeeded()
+        XCTAssertFalse(status.columnCanWiden)
     }
 
     func testChangingThePercentRewrapsAndTellsTheEditor() {

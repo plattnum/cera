@@ -24,6 +24,12 @@ enum ColumnWidth {
         length.isFinite ? min(max(length, 80), 400) : 150
     }
 
+    /// Whether the slider has anywhere to go in a window `windowWidth` wide: a window narrower than the theme's
+    /// column and the two page margins already fills the margins, at any percentage.
+    static func canWiden(for theme: Theme, windowWidth: CGFloat) -> Bool {
+        width(for: theme, windowWidth: windowWidth, percent: 100) > width(for: theme, windowWidth: windowWidth, percent: 0)
+    }
+
     /// The column's width in a window `windowWidth` wide at `percent`: from the theme's column (its wide one from
     /// 1400pt) to the window less the page margins. A window too narrow for the theme's column keeps it, which
     /// the text view then fits between the margins as before.

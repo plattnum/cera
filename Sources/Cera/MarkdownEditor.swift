@@ -88,6 +88,8 @@ struct MarkdownEditor: NSViewRepresentable {
             || context.coordinator.showsSource != showsSource || context.coordinator.isLocked != isLocked {
             context.coordinator.restyle()
         }
+        // A new theme has its own column width, which decides whether the width slider has room.
+        status?.widthChanged()
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate, NSTextStorageDelegate {
